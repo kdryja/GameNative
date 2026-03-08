@@ -71,6 +71,7 @@ import `in`.dragonbra.javasteam.enums.EResult
 import `in`.dragonbra.javasteam.networking.steam3.ProtocolTypes
 import `in`.dragonbra.javasteam.protobufs.steamclient.SteammessagesClientObjects.ECloudPendingRemoteOperation
 import `in`.dragonbra.javasteam.protobufs.steamclient.SteammessagesFamilygroupsSteamclient
+import `in`.dragonbra.javasteam.rpc.service.Cloud
 import `in`.dragonbra.javasteam.rpc.service.FamilyGroups
 import `in`.dragonbra.javasteam.steam.authentication.AuthPollResult
 import `in`.dragonbra.javasteam.steam.authentication.AuthSessionDetails
@@ -234,6 +235,7 @@ class SteamService : Service(), IChallengeUrlChanged {
     private var _steamCloud: SteamCloud? = null
     private var _steamUserStats: SteamUserStats? = null
     private var _steamFamilyGroups: FamilyGroups? = null
+    internal var _cloudService: Cloud? = null
 
     private var _loginResult: LoginResult = LoginResult.Failed
 
@@ -3143,7 +3145,9 @@ class SteamService : Service(), IChallengeUrlChanged {
             _steamUserStats = steamClient!!.getHandler(SteamUserStats::class.java)
 
             _unifiedFriends = SteamUnifiedFriends(this)
-            _steamFamilyGroups = steamClient!!.getHandler<SteamUnifiedMessages>()!!.createService<FamilyGroups>()
+            val unifiedMessages = steamClient!!.getHandler<SteamUnifiedMessages>()!!
+            _steamFamilyGroups = unifiedMessages.createService<FamilyGroups>()
+            _cloudService = unifiedMessages.createService<Cloud>()
 
             // subscribe to the callbacks we are interested in
             with(callbackSubscriptions) {

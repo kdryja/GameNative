@@ -19,6 +19,7 @@ import `in`.dragonbra.javasteam.enums.EResult
 import `in`.dragonbra.javasteam.steam.handlers.steamcloud.AppFileChangeList
 import `in`.dragonbra.javasteam.steam.handlers.steamcloud.AppFileInfo
 import `in`.dragonbra.javasteam.steam.handlers.steamcloud.SteamCloud
+import `in`.dragonbra.javasteam.protobufs.steamclient.SteammessagesCloudSteamclient
 import `in`.dragonbra.javasteam.util.crypto.CryptoHelper
 import java.io.FileOutputStream
 import java.io.InputStream
@@ -37,6 +38,7 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.future.await
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import okhttp3.Headers
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -272,7 +274,6 @@ object SteamAutoCloud {
                     val prefixKey = Paths.get(userFile.prefix).pathString
                     result.getOrPut(prefixKey) { mutableListOf() }.addAll(files)
                 }
-
                 result
             } else {
                 // Fallback: no UFS patterns; scan SteamUserData root recursively (depth 5)
@@ -681,6 +682,127 @@ object SteamAutoCloud {
 
             appFileListChange.printFileChangeList(appInfo)
 
+
+            // Enumerate ISteamRemoteStorage files (separate from UFS auto-cloud)
+            // These are files written by the game via ISteamRemoteStorage::FileWrite()
+            // and are NOT returned by getAppFileListChange()
+            val ufsFileNames = appFileListChange.files.map { it.filename }.toSet()
+            var remoteStorageFiles: List<SteammessagesCloudSteamclient.CCloud_UserFile> = emptyList()
+            try {
+                val cloudService = steamInstance._cloudService
+                if (cloudService != null) {
+                    val enumRequest = SteammessagesCloudSteamclient.CCloud_EnumerateUserFiles_Request.newBuilder().apply {
+                        appid = appInfo.id
+                        count = 500
+                        startIndex = 0
+                    }.build()
+
+                    val enumResponse = cloudService.enumerateUserFiles(enumRequest).await()
+                    remoteStorageFiles = enumResponse.body.filesList
+
+                    Timber.i("EnumerateUserFiles returned ${remoteStorageFiles.size} ISteamRemoteStorage file(s)")
+                    remoteStorageFiles.forEach { file ->
+                        Timber.i("  ISteamRemoteStorage file: ${file.filename} (size=${file.fileSize}, sha=${file.fileSha})")
+                    }
+
+                    // Filter to files NOT already covered by UFS auto-cloud
+                    val isrsOnlyFiles = remoteStorageFiles.filter { it.filename !in ufsFileNames }
+
+                    if (isrsOnlyFiles.isNotEmpty()) {
+                        Timber.i("Found ${isrsOnlyFiles.size} ISteamRemoteStorage-only file(s) to sync")
+
+                        val steamUserDataPath = Paths.get(prefixToPath(PathType.SteamUserData.toString()))
+                        Files.createDirectories(steamUserDataPath)
+
+                        isrsOnlyFiles.forEach { file ->
+                            val localPath = steamUserDataPath.resolve(file.filename)
+
+                            // Check if local file exists and matches the cloud SHA
+                            val needsDownload = if (Files.exists(localPath)) {
+                                val localSha = CryptoHelper.shaHash(Files.readAllBytes(localPath))
+                                val cloudSha = file.fileSha.toByteArray()
+                                val shaMatch = localSha.contentEquals(cloudSha)
+                                if (shaMatch) {
+                                    Timber.i("ISteamRemoteStorage file ${file.filename} already up to date locally")
+                                }
+                                !shaMatch
+                            } else {
+                                true
+                            }
+
+                            if (needsDownload) {
+                                Timber.i("Downloading ISteamRemoteStorage file: ${file.filename}")
+                                try {
+                                    val fileDownloadInfo = steamCloud.clientFileDownload(appInfo.id, file.filename).await()
+
+                                    if (fileDownloadInfo.urlHost.isNotEmpty()) {
+                                        val httpUrl = with(fileDownloadInfo) {
+                                            val scheme = if (useHttps) "https://" else "http://"
+                                            "$scheme${urlHost}$urlPath"
+                                        }
+
+                                        val headers = Headers.headersOf(
+                                            *fileDownloadInfo.requestHeaders
+                                                .map { listOf(it.name, it.value) }
+                                                .flatten()
+                                                .toTypedArray(),
+                                        )
+
+                                        val request = Request.Builder()
+                                            .url(httpUrl)
+                                            .headers(headers)
+                                            .build()
+
+                                        val httpClient = steamInstance.steamClient!!.configuration.httpClient
+
+                                        withTimeout(SteamService.requestTimeout) {
+                                            val response = httpClient.newCall(request).execute()
+
+                                            if (response.isSuccessful) {
+                                                Files.createDirectories(localPath.parent)
+
+                                                if (fileDownloadInfo.fileSize != fileDownloadInfo.rawFileSize) {
+                                                    // Compressed download
+                                                    response.body?.byteStream()?.use { inputStream ->
+                                                        ZipInputStream(inputStream).use { zipInput ->
+                                                            val entry = zipInput.nextEntry
+                                                            if (entry != null) {
+                                                                FileOutputStream(localPath.toString()).use { fs ->
+                                                                    zipInput.copyTo(fs)
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                } else {
+                                                    response.body?.byteStream()?.use { inputStream ->
+                                                        FileOutputStream(localPath.toString()).use { fs ->
+                                                            inputStream.copyTo(fs)
+                                                        }
+                                                    }
+                                                }
+
+                                                Timber.i("Successfully downloaded ISteamRemoteStorage file: ${file.filename} to $localPath")
+                                            } else {
+                                                Timber.w("Failed to download ISteamRemoteStorage file ${file.filename}: ${response.code}")
+                                            }
+                                            response.close()
+                                        }
+                                    } else {
+                                        Timber.w("Empty URL host for ISteamRemoteStorage file ${file.filename}")
+                                    }
+                                } catch (e: Exception) {
+                                    Timber.w(e, "Error downloading ISteamRemoteStorage file ${file.filename}")
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Timber.w("Cloud service not available, skipping ISteamRemoteStorage file enumeration")
+                }
+            } catch (e: Exception) {
+                Timber.w(e, "Failed to enumerate ISteamRemoteStorage files, continuing with UFS-only sync")
+            }
+
             // retrieve existing user files from local storage
             val localUserFilesMap: Map<String, List<UserFileInfo>>
             val allLocalUserFiles: List<UserFileInfo>
@@ -886,6 +1008,103 @@ object SteamAutoCloud {
                 Timber.e("Local change number greater than cloud $localAppChangeNumber > $cloudAppChangeNumber")
 
                 syncResult = SyncResult.UnknownFail
+            }
+
+            // Upload modified ISteamRemoteStorage files (separate from UFS batch)
+            // These files use bare filenames (e.g., "SaveData") not prefixed names
+            try {
+                if (remoteStorageFiles.isNotEmpty()) {
+                    val steamUserDataPath = Paths.get(prefixToPath(PathType.SteamUserData.toString()))
+
+                    if (Files.exists(steamUserDataPath)) {
+                        remoteStorageFiles.forEach { cloudFile ->
+                            val localPath = steamUserDataPath.resolve(cloudFile.filename)
+
+                            if (Files.exists(localPath)) {
+                                val localSha = CryptoHelper.shaHash(Files.readAllBytes(localPath))
+                                val cloudSha = cloudFile.fileSha.toByteArray()
+
+                                if (!localSha.contentEquals(cloudSha)) {
+                                    Timber.i("ISteamRemoteStorage file ${cloudFile.filename} modified locally, uploading with bare filename")
+
+                                    try {
+                                        val fileSize = Files.size(localPath).toInt()
+
+                                        val uploadInfo = steamCloud.beginFileUpload(
+                                            appId = appInfo.id,
+                                            filename = cloudFile.filename, // bare filename, no prefix!
+                                            fileSize = fileSize,
+                                            rawFileSize = fileSize,
+                                            fileSha = localSha,
+                                            timestamp = Date(Files.getLastModifiedTime(localPath).toMillis()),
+                                            uploadBatchId = 0, // not part of a UFS batch
+                                        ).await()
+
+                                        var uploadSuccess = true
+
+                                        RandomAccessFile(localPath.pathString, "r").use { fs ->
+                                            uploadInfo.blockRequests.forEach { blockRequest ->
+                                                val httpUrl = with(blockRequest) {
+                                                    val scheme = if (useHttps) "https://" else "http://"
+                                                    "$scheme${urlHost}$urlPath"
+                                                }
+
+                                                val byteArray = ByteArray(blockRequest.blockLength)
+                                                fs.seek(blockRequest.blockOffset)
+                                                fs.read(byteArray, 0, blockRequest.blockLength)
+
+                                                val mediaType = "application/octet-stream".toMediaTypeOrNull()
+                                                val requestBody = byteArray.toRequestBody(mediaType)
+
+                                                val headers = Headers.headersOf(
+                                                    *blockRequest.requestHeaders
+                                                        .map { listOf(it.name, it.value) }
+                                                        .flatten()
+                                                        .toTypedArray(),
+                                                )
+
+                                                val request = Request.Builder()
+                                                    .url(httpUrl)
+                                                    .put(requestBody)
+                                                    .headers(headers)
+                                                    .addHeader("Accept", "text/html,*/*;q=0.9")
+                                                    .addHeader("accept-encoding", "gzip,identity,*;q=0")
+                                                    .addHeader("accept-charset", "ISO-8859-1,utf-8,*;q=0.7")
+                                                    .addHeader("user-agent", "Valve/Steam HTTP Client 1.0")
+                                                    .build()
+
+                                                val httpClient = steamInstance.steamClient!!.configuration.httpClient
+
+                                                withTimeout(SteamService.requestTimeout) {
+                                                    val response = httpClient.newCall(request).execute()
+                                                    if (!response.isSuccessful) {
+                                                        Timber.w("Failed to upload block for ISteamRemoteStorage file ${cloudFile.filename}")
+                                                        uploadSuccess = false
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        val commitSuccess = steamCloud.commitFileUpload(
+                                            transferSucceeded = uploadSuccess,
+                                            appId = appInfo.id,
+                                            fileSha = localSha,
+                                            filename = cloudFile.filename, // bare filename!
+                                        ).await()
+
+                                        Timber.i("ISteamRemoteStorage file ${cloudFile.filename} upload commit: $commitSuccess")
+                                    } catch (e: Exception) {
+                                        Timber.w(e, "Error uploading ISteamRemoteStorage file ${cloudFile.filename}")
+                                    }
+                                } else {
+                                    Timber.i("ISteamRemoteStorage file ${cloudFile.filename} unchanged, skipping upload")
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Timber.w(e, "Failed to upload ISteamRemoteStorage files")
             }
         }.inWholeMicroseconds
 

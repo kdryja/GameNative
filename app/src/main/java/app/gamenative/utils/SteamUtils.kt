@@ -919,13 +919,13 @@ object SteamUtils {
                 appendLine("ticket=$ticketBase64")
             }
 
-            // Only add [user::saves] section if no saveFilePatterns are defined
-            if (!hasSaveFilePatterns) {
-                val steamUserDataPath = "C:\\Program Files (x86)\\Steam\\userdata\\$accountId"
-                appendLine()
-                appendLine("[user::saves]")
-                appendLine("local_save_path=$steamUserDataPath")
-            }
+            // Always configure local_save_path so GSE knows where ISteamRemoteStorage files are,
+            // even when the game also has UFS saveFilePatterns (e.g., Vampire Survivors has both
+            // UFS *.sav patterns AND ISteamRemoteStorage files like SaveData)
+            val steamUserDataPath = "C:\\Program Files (x86)\\Steam\\userdata\\$accountId"
+            appendLine()
+            appendLine("[user::saves]")
+            appendLine("local_save_path=$steamUserDataPath")
         }
 
         if (Files.notExists(configsIni)) Files.createFile(configsIni)
