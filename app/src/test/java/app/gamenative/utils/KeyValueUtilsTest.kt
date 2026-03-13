@@ -82,14 +82,65 @@ class KeyValueUtilsTest {
         assertEquals(PathType.WinAppDataRoaming, patterns[0].root)
         assertEquals("blue-revolver-final", patterns[0].path)
         assertEquals("save2.lua", patterns[0].pattern)
+        assertEquals(0, patterns[0].recursive)
 
         assertEquals(PathType.WinAppDataRoaming, patterns[1].root)
         assertEquals("blue-revolver-double-action", patterns[1].path)
         assertEquals("brda_save.sav", patterns[1].pattern)
+        assertEquals(0, patterns[1].recursive)
 
         assertEquals(PathType.WinAppDataRoaming, patterns[2].root)
         assertEquals("love/blue-revolver-final", patterns[2].path)
         assertEquals("save2.lua", patterns[2].pattern)
+        assertEquals(0, patterns[2].recursive)
+    }
+
+    /**
+     * A Windows rootoverride with a non-empty addpath should prepend the addpath to the original
+     * save file path (e.g. addpath="AppData/Roaming" + path="MyGame" → "AppData/Roaming/MyGame").
+     */
+    @Test
+    fun windowsRootOverrideWithNonEmptyAddPathPrependsToSavePath() {
+        val kvString = """
+            "appinfo"
+            {
+                "appid"     "123456"
+                "ufs"
+                {
+                    "quota"         "1000000000"
+                    "maxnumfiles"   "10"
+                    "savefiles"
+                    {
+                        "0"
+                        {
+                            "root"      "gameinstall"
+                            "path"      "saves"
+                            "pattern"   "*.sav"
+                        }
+                    }
+                    "rootoverrides"
+                    {
+                        "0"
+                        {
+                            "root"          "gameinstall"
+                            "os"            "Windows"
+                            "oscompare"     "="
+                            "useinstead"    "WinAppDataRoaming"
+                            "addpath"       "MyGame"
+                        }
+                    }
+                }
+            }
+        """.trimIndent()
+        val kv = KeyValue.loadFromString(kvString)!!
+        val steamApp = kv.generateSteamApp()
+
+        val patterns = steamApp.ufs.saveFilePatterns
+        assertEquals(1, patterns.size)
+        assertEquals(PathType.WinAppDataRoaming, patterns[0].root)
+        assertEquals("MyGame/saves", patterns[0].path)
+        assertEquals("*.sav", patterns[0].pattern)
+        assertEquals(0, patterns[0].recursive)
     }
 
     /**
