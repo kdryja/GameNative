@@ -169,7 +169,9 @@ fun KeyValue.generateSteamApp(): SteamApp {
 
                     SaveFilePattern(
                         root = rootRemap?.second ?: originalRoot,
-                        path = (rootRemap?.third?.takeIf { it.isNotEmpty() } ?: "") + originalPath,
+                        path = rootRemap?.third?.takeIf { it.isNotEmpty() }?.let { addPath ->
+                            "$addPath/$originalPath"
+                        } ?: originalPath,
                         pattern = saveFile["pattern"].value.orEmpty(),
                         recursive = saveFile["recursive"].asInteger(0),
                     )
