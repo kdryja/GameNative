@@ -1,0 +1,203 @@
+"appinfo"
+{
+	"appid"		"439490"
+	"common"
+	{
+		"name"		"BLUE REVOLVER"
+		"type"		"Game"
+		"clienttga"		"8a6a1b01ad1566db0b6300e6acc3058d03c55893"
+		"clienticon"		"eba3afba6e2558d4b1ead0c3ea9f128def00190c"
+		"icon"		"59e5a9c800756c699116aa4f6c68a3873360e1b3"
+		"clienticns"		"6ea1b7347173d6e0861e322a6e22c1e605ba8a6d"
+		"oslist"		"windows,macos,linux"
+		"osarch"		""
+		"logo"		"77a189e5c17208cfaa9b69c41bc50bb44eff56b0"
+		"logo_small"		"77a189e5c17208cfaa9b69c41bc50bb44eff56b0_thumb"
+		"ReleaseState"		"released"
+		"osextended"		"macos64,macosapplesilicon"
+		"metacritic_name"		"BLUE REVOLVER"
+		"controllertagwizard"		"1"
+		"controller_support"		"full"
+		"steam_release_date"		"1476205040"
+		"community_visible_stats"		"1"
+		"community_hub_visible"		"1"
+		"gameid"		"439490"
+		"review_score"		"9"
+		"review_percentage"		"98"
+	}
+	"extended"
+	{
+		"developer"		"danbo"
+		"publisher"		"Stellar Circle"
+		"homepage"		"https://danboland.net/brda/"
+	}
+	"config"
+	{
+		"contenttype"		"3"
+		"installdir"		"BLUE REVOLVER"
+		"launch"
+		{
+			"0"
+			{
+				"executable"		"bluerevolver.exe"
+				"type"		"default"
+				"config"
+				{
+					"oslist"		"windows"
+				}
+			}
+			"1"
+			{
+				"executable"		"bluerevolver.app"
+				"type"		"default"
+				"config"
+				{
+					"oslist"		"macos"
+					"osarch"		"64"
+				}
+			}
+			"2"
+			{
+				"executable"		"run.sh"
+				"type"		"default"
+				"config"
+				{
+					"oslist"		"linux"
+				}
+			}
+		}
+	}
+	"depots"
+	{
+		"439491"
+		{
+			"config"
+			{
+				"oslist"		"windows"
+			}
+			"manifests"
+			{
+				"public"
+				{
+					"gid"		"2294351241466825511"
+					"size"		"1246205769"
+					"download"		"1195119920"
+				}
+			}
+		}
+		"439492"
+		{
+			"config"
+			{
+				"oslist"		"macos"
+			}
+			"manifests"
+			{
+				"public"
+				{
+					"gid"		"4418773377630782369"
+					"size"		"1263362898"
+					"download"		"1199876096"
+				}
+			}
+		}
+		"439493"
+		{
+			"config"
+			{
+				"oslist"		"linux"
+			}
+			"manifests"
+			{
+				"public"
+				{
+					"gid"		"2583846437361481995"
+					"size"		"1249492173"
+					"download"		"1195957760"
+				}
+			}
+		}
+		"439494"
+		{
+			"config"
+			{
+				"oslist"		"windows"
+				"osarch"		"64"
+			}
+			"manifests"
+			{
+				"public"
+				{
+					"gid"		"3769906124355020964"
+					"size"		"1247991113"
+					"download"		"1195646624"
+				}
+			}
+		}
+		"branches"
+		{
+			"public"
+			{
+				"buildid"		"16616887"
+				"timeupdated"		"1733241731"
+			}
+		}
+	}
+	"ufs"
+	{
+		"quota"		"1000000000"
+		"maxnumfiles"		"1000"
+		"savefiles"
+		{
+			"1"
+			{
+				"root"		"gameinstall"
+				"path"		"blue-revolver-final"
+				"pattern"		"save2.lua"
+			}
+			"2"
+			{
+				"root"		"gameinstall"
+				"path"		"blue-revolver-double-action"
+				"pattern"		"brda_save.sav"
+			}
+			"3"
+			{
+				"root"		"gameinstall"
+				"path"		"love/blue-revolver-final"
+				"pattern"		"save2.lua"
+				"platforms"
+				{
+					"1"		"Linux"
+				}
+			}
+		}
+		"rootoverrides"
+		{
+			"0"
+			{
+				"root"		"gameinstall"
+				"os"		"Windows"
+				"oscompare"		"="
+				"useinstead"		"WinAppDataRoaming"
+				"addpath"		""
+			}
+			"1"
+			{
+				"root"		"gameinstall"
+				"os"		"MacOS"
+				"oscompare"		"="
+				"useinstead"		"MacAppSupport"
+				"addpath"		""
+			}
+			"2"
+			{
+				"root"		"gameinstall"
+				"os"		"Linux"
+				"oscompare"		"="
+				"useinstead"		"LinuxHome"
+				"addpath"		".local/share/"
+			}
+		}
+	}
+}
