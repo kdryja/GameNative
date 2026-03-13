@@ -144,6 +144,54 @@ class KeyValueUtilsTest {
     }
 
     /**
+     * A Windows rootoverride whose addpath has a trailing slash should not produce a double
+     * separator (e.g. "MyGame/" + "saves" → "MyGame/saves", not "MyGame//saves").
+     */
+    @Test
+    fun windowsRootOverrideWithTrailingSlashAddPathDoesNotDuplicateSeparator() {
+        val kvString = """
+            "appinfo"
+            {
+                "appid"     "123457"
+                "ufs"
+                {
+                    "quota"         "1000000000"
+                    "maxnumfiles"   "10"
+                    "savefiles"
+                    {
+                        "0"
+                        {
+                            "root"      "gameinstall"
+                            "path"      "saves"
+                            "pattern"   "*.sav"
+                        }
+                    }
+                    "rootoverrides"
+                    {
+                        "0"
+                        {
+                            "root"          "gameinstall"
+                            "os"            "Windows"
+                            "oscompare"     "="
+                            "useinstead"    "WinAppDataRoaming"
+                            "addpath"       "MyGame/"
+                        }
+                    }
+                }
+            }
+        """.trimIndent()
+        val kv = KeyValue.loadFromString(kvString)!!
+        val steamApp = kv.generateSteamApp()
+
+        val patterns = steamApp.ufs.saveFilePatterns
+        assertEquals(1, patterns.size)
+        assertEquals(PathType.WinAppDataRoaming, patterns[0].root)
+        assertEquals("MyGame/saves", patterns[0].path)
+        assertEquals("*.sav", patterns[0].pattern)
+        assertEquals(0, patterns[0].recursive)
+    }
+
+    /**
      * Hades has only a MacOS rootoverride. Windows save paths should be left untouched.
      */
     @Test
@@ -187,5 +235,6 @@ class KeyValueUtilsTest {
         assertEquals(PathType.WinMyDocuments, patterns[0].root)
         assertEquals("Saved Games/Hades", patterns[0].path)
         assertEquals("Profile*.sav", patterns[0].pattern)
+        assertEquals(0, patterns[0].recursive)
     }
 }
