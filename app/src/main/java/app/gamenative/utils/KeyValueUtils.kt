@@ -25,6 +25,8 @@ import `in`.dragonbra.javasteam.types.KeyValue
 import java.util.Date
 import timber.log.Timber
 
+const val CURRENT_UFS_PARSE_VERSION = 1
+
 /**
  * Extension functions relating to [KeyValue] as the receiver type.
  */
@@ -147,6 +149,7 @@ fun KeyValue.generateSteamApp(): SteamApp {
             steamInputManifestPath = this["config"]["steaminputmanifestpath"].value.orEmpty(),
             steamControllerConfigDetails = parseSteamControllerConfigDetails(),
         ),
+        ufsParseVersion = CURRENT_UFS_PARSE_VERSION,
         ufs = run {
             // Parse rootoverrides: Steam allows per-OS root replacements. Since GameNative
             // always runs Windows games via Wine, apply only the Windows overrides.

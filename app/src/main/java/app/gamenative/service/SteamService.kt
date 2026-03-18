@@ -52,6 +52,7 @@ import app.gamenative.utils.LicenseSerializer
 import app.gamenative.utils.MarkerUtils
 import app.gamenative.utils.Net
 import app.gamenative.utils.SteamUtils
+import app.gamenative.utils.CURRENT_UFS_PARSE_VERSION
 import app.gamenative.utils.generateSteamApp
 import com.winlator.container.Container
 import com.winlator.xenvironment.ImageFs
@@ -3600,7 +3601,8 @@ class SteamService : Service(), IChallengeUrlChanged {
 
                             // TODO maybe apps with -1 for the ownerAccountId can be stripped with necessities and name.
 
-                            if (app.changeNumber != appFromDb?.lastChangeNumber) {
+                            if (app.changeNumber != appFromDb?.lastChangeNumber ||
+                                (appFromDb != null && appFromDb.ufsParseVersion < CURRENT_UFS_PARSE_VERSION)) {
                                 app.keyValues.generateSteamApp().copy(
                                     packageId = packageId,
                                     ownerAccountId = ownerAccountId,

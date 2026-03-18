@@ -431,4 +431,19 @@ class KeyValueUtilsTest {
         assertEquals(0, patterns[0].recursive)
         assertEquals(PathType.WinMyDocuments, patterns[0].uploadRoot)
     }
+
+    @Test
+    fun generateSteamAppStampsCurrentUfsParseVersion() {
+        val kvString = """
+            "appinfo"
+            {
+                "appid"     "439490"
+            }
+        """.trimIndent()
+
+        val kv = KeyValue.loadFromString(kvString)!!
+        val steamApp = kv.generateSteamApp()
+
+        assertEquals(CURRENT_UFS_PARSE_VERSION, steamApp.ufsParseVersion)
+    }
 }
