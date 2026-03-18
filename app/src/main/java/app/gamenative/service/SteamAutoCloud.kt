@@ -650,7 +650,9 @@ object SteamAutoCloud {
         microsecTotal = measureTime {
             val localAppChangeNumber = overrideLocalChangeNumber ?: steamInstance.changeNumbersDao.getByAppId(appInfo.id)?.changeNumber ?: -1
 
-            val changeNumber = if (localAppChangeNumber >= 0) localAppChangeNumber else 0
+            val cachedFileList = steamInstance.fileChangeListsDao.getByAppId(appInfo.id)
+            val cacheIsAbsentOrEmpty = cachedFileList == null || cachedFileList.userFileInfo.isEmpty()
+            val changeNumber = if (!cacheIsAbsentOrEmpty && localAppChangeNumber >= 0) localAppChangeNumber else 0L
             val appFileListChange = steamCloud.getAppFileListChange(appInfo.id, changeNumber).await()
 
             val cloudAppChangeNumber = appFileListChange.currentChangeNumber
@@ -667,6 +669,13 @@ object SteamAutoCloud {
                 localUserFilesMap = getLocalUserFilesAsPrefixMap()
                 allLocalUserFiles = localUserFilesMap.map { it.value }.flatten()
             }.inWholeMicroseconds
+
+            val effectiveLocalChangeNumber = if (cacheIsAbsentOrEmpty && allLocalUserFiles.isNotEmpty()) {
+                Timber.w("Cache absent/empty but local files exist — forcing full cloud fetch (storedCn=$localAppChangeNumber)")
+                -1L
+            } else {
+                localAppChangeNumber
+            }
 
             val downloadUserFiles: (CoroutineScope) -> Deferred<PostSyncInfo?> = { parentScope ->
                 parentScope.async {
@@ -764,7 +773,7 @@ object SteamAutoCloud {
                 }
             }
 
-            if (localAppChangeNumber < cloudAppChangeNumber) {
+            if (effectiveLocalChangeNumber < cloudAppChangeNumber) {
                 // our change number is less than the expected, meaning we are behind and
                 // need to download the new user files, but first we should check that
                 // the local user files are not conflicting with their respective change
@@ -814,14 +823,14 @@ object SteamAutoCloud {
                         }
                     }
                 }.inWholeMicroseconds
-            } else if (localAppChangeNumber == cloudAppChangeNumber) {
+            } else if (effectiveLocalChangeNumber == cloudAppChangeNumber) {
                 // our app change numbers are the same so the file hashes should match
                 // if they do not then that means we have new user files locally that
                 // need uploading
                 microsecAcExit = measureTime {
                     // var fileChanges: FileChanges? = null
 
-                    val hasLocalChanges = steamInstance.fileChangeListsDao.getByAppId(appInfo.id)
+                    val hasLocalChanges = cachedFileList
                         ?.let {
                             val result = getFilesDiff(allLocalUserFiles, it.userFileInfo)
                             // fileChanges = result.second
