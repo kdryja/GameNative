@@ -268,6 +268,19 @@ class SteamAutoCloudTest {
 
     @Test
     fun testMultiplePatternsSamePrefix_returnsAllFiles() = runBlocking {
+        // Insert a non-empty stale cache so cacheIsAbsentOrEmpty=false and the upload path is taken.
+        runBlocking {
+            db.appFileChangeListsDao().insert(steamAppId, listOf(
+                app.gamenative.data.UserFileInfo(
+                    root = PathType.WinMyDocuments,
+                    path = "__stale__",
+                    filename = "__placeholder__",
+                    timestamp = 0L,
+                    sha = ByteArray(20) { 0 },
+                )
+            ))
+        }
+
         // Get the test app
         val testApp = db.steamAppDao().findApp(steamAppId)!!
 
@@ -694,12 +707,21 @@ class SteamAutoCloudTest {
             db.steamAppDao().update(updatedApp)
         }
 
-        // Clear existing database state
+        // Clear existing database state and insert a non-empty stale cache so
+        // cacheIsAbsentOrEmpty=false and the upload path is taken.
         runBlocking {
             db.appChangeNumbersDao().deleteByAppId(steamAppId)
             db.appFileChangeListsDao().deleteByAppId(steamAppId)
             db.appChangeNumbersDao().insert(app.gamenative.data.ChangeNumbers(steamAppId, 0))
-            db.appFileChangeListsDao().insert(steamAppId, emptyList())
+            db.appFileChangeListsDao().insert(steamAppId, listOf(
+                app.gamenative.data.UserFileInfo(
+                    root = PathType.WinMyDocuments,
+                    path = "__stale__",
+                    filename = "__placeholder__",
+                    timestamp = 0L,
+                    sha = ByteArray(20) { 0 },
+                )
+            ))
         }
 
         // Mock empty cloud (no cloud files)
@@ -806,12 +828,21 @@ class SteamAutoCloudTest {
             db.steamAppDao().update(updatedApp)
         }
 
-        // Clear existing database state
+        // Clear existing database state and insert a non-empty stale cache so
+        // cacheIsAbsentOrEmpty=false and the upload path is taken.
         runBlocking {
             db.appChangeNumbersDao().deleteByAppId(steamAppId)
             db.appFileChangeListsDao().deleteByAppId(steamAppId)
             db.appChangeNumbersDao().insert(app.gamenative.data.ChangeNumbers(steamAppId, 0))
-            db.appFileChangeListsDao().insert(steamAppId, emptyList())
+            db.appFileChangeListsDao().insert(steamAppId, listOf(
+                app.gamenative.data.UserFileInfo(
+                    root = PathType.WinMyDocuments,
+                    path = "__stale__",
+                    filename = "__placeholder__",
+                    timestamp = 0L,
+                    sha = ByteArray(20) { 0 },
+                )
+            ))
         }
 
         // Mock empty cloud (no cloud files)
@@ -853,9 +884,10 @@ class SteamAutoCloudTest {
             prefixToPath = prefixToPath,
         ).await()
 
-        // Verify result - should find files at depths 0-5 (6 files), but not depths 6-7
+        // Verify result - should find files at depths 0-4 (5 files); depth 5 (subdir5) is
+        // the last directory walked but maxDepth=5 does not recurse into its subdirectories.
         assertNotNull("Result should not be null", result)
-        assertEquals("Should upload 5 files (depths 0-5, maxDepth=5)", 5, result!!.filesUploaded)
+        assertEquals("Should upload 5 files (depths 0-4, maxDepth=5)", 5, result!!.filesUploaded)
         assertTrue("Uploads should be completed", result.uploadsCompleted)
         assertEquals("Should have 5 files managed", 5, result.filesManaged)
 
@@ -1168,7 +1200,16 @@ class SteamAutoCloudTest {
             db.appChangeNumbersDao().deleteByAppId(steamAppId)
             db.appFileChangeListsDao().deleteByAppId(steamAppId)
             db.appChangeNumbersDao().insert(app.gamenative.data.ChangeNumbers(steamAppId, matchingChangeNumber.toLong()))
-            db.appFileChangeListsDao().insert(steamAppId, emptyList())
+            // Insert a non-empty stale cache so cacheIsAbsentOrEmpty=false and the upload path is taken.
+            db.appFileChangeListsDao().insert(steamAppId, listOf(
+                app.gamenative.data.UserFileInfo(
+                    root = PathType.WinMyDocuments,
+                    path = "__stale__",
+                    filename = "__placeholder__",
+                    timestamp = 0L,
+                    sha = ByteArray(20) { 0 },
+                )
+            ))
         }
 
         // Create a temp directory to act as the WinAppDataRoaming root
