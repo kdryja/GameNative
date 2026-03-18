@@ -195,6 +195,7 @@ fun KeyValue.generateSteamApp(): SteamApp {
                         } ?: originalPath,
                         pattern = saveFile["pattern"].value.orEmpty(),
                         recursive = saveFile["recursive"].asInteger(0),
+                        uploadRoot = originalRoot,
                     )
                 },
             )

@@ -1155,5 +1155,110 @@ class SteamAutoCloudTest {
         assertNotNull("Change number should exist", changeNumber)
         assertEquals("Change number should be updated", (matchingChangeNumber + 1).toLong(), changeNumber!!.changeNumber)
     }
+
+    /**
+     * When a Windows rootoverride remaps GameInstall → WinAppDataRoaming, the SaveFilePattern
+     * has root=WinAppDataRoaming (used for local file lookup) and uploadRoot=GameInstall (used
+     * for the cloud prefix). Uploads must use %GameInstall% as the prefix, not %WinAppDataRoaming%.
+     */
+    @Test
+    fun uploadUsesOriginalRootPrefixWhenRootoverrideApplied() = runBlocking {
+        val matchingChangeNumber = 5
+        runBlocking {
+            db.appChangeNumbersDao().deleteByAppId(steamAppId)
+            db.appFileChangeListsDao().deleteByAppId(steamAppId)
+            db.appChangeNumbersDao().insert(app.gamenative.data.ChangeNumbers(steamAppId, matchingChangeNumber.toLong()))
+            db.appFileChangeListsDao().insert(steamAppId, emptyList())
+        }
+
+        // Create a temp directory to act as the WinAppDataRoaming root
+        val roamingRoot = File(tempDir, "roaming")
+        val saveSubdir = File(roamingRoot, "TheGame")
+        saveSubdir.mkdirs()
+        val saveFile = File(saveSubdir, "save.sav")
+        saveFile.writeBytes("rootoverride save content".toByteArray())
+
+        // SaveFilePattern with rootoverride applied: root remapped to WinAppDataRoaming,
+        // uploadRoot preserved as GameInstall (the original manifest root).
+        val saveFilePatterns = listOf(
+            SaveFilePattern(
+                root = PathType.WinAppDataRoaming,
+                path = "TheGame",
+                pattern = "save.sav",
+                uploadRoot = PathType.GameInstall,
+            ),
+        )
+        val updatedApp = db.steamAppDao().findApp(steamAppId)!!.copy(ufs = UFS(saveFilePatterns = saveFilePatterns))
+
+        val mockAppFileChangeList = mock<AppFileChangeList>()
+        whenever(mockAppFileChangeList.currentChangeNumber).thenReturn(matchingChangeNumber.toLong())
+        whenever(mockAppFileChangeList.isOnlyDelta).thenReturn(false)
+        whenever(mockAppFileChangeList.appBuildIDHwm).thenReturn(0)
+        whenever(mockAppFileChangeList.pathPrefixes).thenReturn(emptyList())
+        whenever(mockAppFileChangeList.machineNames).thenReturn(emptyList())
+        whenever(mockAppFileChangeList.files).thenReturn(emptyList())
+
+        every { mockSteamCloud.getAppFileListChange(any(), any(), any()) } returns
+            CompletableFuture.completedFuture(mockAppFileChangeList)
+
+        val mockUploadBatchResponse = mock<`in`.dragonbra.javasteam.steam.handlers.steamcloud.AppUploadBatchResponse>()
+        whenever(mockUploadBatchResponse.batchID).thenReturn(1)
+        whenever(mockUploadBatchResponse.appChangeNumber).thenReturn((matchingChangeNumber + 1).toLong())
+
+        val capturedFilesToUpload = mutableListOf<List<String>>()
+        every {
+            mockSteamCloud.beginAppUploadBatch(any(), any(), any(), any(), any(), any(), any())
+        } answers {
+            for (i in args.indices) {
+                val a = args[i]
+                if (a is List<*> && a.all { it is String } && capturedFilesToUpload.isEmpty()) {
+                    capturedFilesToUpload.add(a as List<String>)
+                }
+            }
+            CompletableFuture.completedFuture(mockUploadBatchResponse)
+        }
+
+        val mockFileUploadInfo = mock<`in`.dragonbra.javasteam.steam.handlers.steamcloud.FileUploadInfo>()
+        whenever(mockFileUploadInfo.blockRequests).thenReturn(emptyList())
+
+        every { mockSteamCloud.beginFileUpload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns
+            CompletableFuture.completedFuture(mockFileUploadInfo)
+
+        every { mockSteamCloud.commitFileUpload(any(), any(), any(), any(), any()) } returns
+            CompletableFuture.completedFuture(true)
+
+        every { mockSteamCloud.completeAppUploadBatch(any(), any(), any(), any()) } returns
+            CompletableFuture.completedFuture(Unit)
+
+        val prefixToPath: (String) -> String = { prefix ->
+            when (prefix) {
+                "WinAppDataRoaming" -> roamingRoot.absolutePath
+                else -> tempDir.absolutePath
+            }
+        }
+
+        val result = SteamAutoCloud.syncUserFiles(
+            appInfo = updatedApp,
+            clientId = clientId,
+            steamInstance = mockSteamService,
+            steamCloud = mockSteamCloud,
+            preferredSave = SaveLocation.None,
+            prefixToPath = prefixToPath,
+        ).await()
+
+        assertNotNull("Result should not be null", result)
+        assertEquals("Should upload 1 file", 1, result!!.filesUploaded)
+        assertTrue("Uploads should be completed", result.uploadsCompleted)
+
+        val filesToUpload = capturedFilesToUpload.singleOrNull() ?: emptyList()
+        assertTrue(
+            "Upload prefix must use original GameInstall root, not remapped WinAppDataRoaming. Got: $filesToUpload",
+            filesToUpload.any { it.startsWith("%GameInstall%") }
+        )
+        assertFalse(
+            "Upload prefix must NOT use remapped WinAppDataRoaming root. Got: $filesToUpload",
+            filesToUpload.any { it.startsWith("%WinAppDataRoaming%") }
+        )
+    }
 }
 

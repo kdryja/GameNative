@@ -87,11 +87,13 @@ class KeyValueUtilsTest {
         assertEquals("blue-revolver-final", patterns[0].path)
         assertEquals("save2.lua", patterns[0].pattern)
         assertEquals(0, patterns[0].recursive)
+        assertEquals(PathType.GameInstall, patterns[0].uploadRoot)
 
         assertEquals(PathType.WinAppDataRoaming, patterns[1].root)
         assertEquals("blue-revolver-double-action", patterns[1].path)
         assertEquals("brda_save.sav", patterns[1].pattern)
         assertEquals(0, patterns[1].recursive)
+        assertEquals(PathType.GameInstall, patterns[1].uploadRoot)
     }
 
     /**
@@ -140,6 +142,7 @@ class KeyValueUtilsTest {
         assertEquals("MyGame/saves", patterns[0].path)
         assertEquals("*.sav", patterns[0].pattern)
         assertEquals(0, patterns[0].recursive)
+        assertEquals(PathType.GameInstall, patterns[0].uploadRoot)
     }
 
     /**
@@ -188,6 +191,7 @@ class KeyValueUtilsTest {
         assertEquals("MyGame/saves", patterns[0].path)
         assertEquals("*.sav", patterns[0].pattern)
         assertEquals(0, patterns[0].recursive)
+        assertEquals(PathType.GameInstall, patterns[0].uploadRoot)
     }
 
     /**
@@ -233,6 +237,7 @@ class KeyValueUtilsTest {
         assertEquals(1, patterns.size)
         assertEquals(PathType.WinMyDocuments, patterns[0].root)
         assertEquals("*.bak", patterns[0].pattern)
+        assertEquals(PathType.WinMyDocuments, patterns[0].uploadRoot)
     }
 
     /**
@@ -285,10 +290,12 @@ class KeyValueUtilsTest {
         assertEquals("Nolla_Games_Noita", patterns[0].path)
         assertEquals("save00/world/*.bin", patterns[0].pattern)
         assertEquals(1, patterns[0].recursive)
+        assertEquals(PathType.WinAppDataLocalLow, patterns[0].uploadRoot)
         assertEquals(PathType.WinAppDataLocalLow, patterns[1].root)
         assertEquals("Nolla_Games_Noita", patterns[1].path)
         assertEquals("save00/*.xml", patterns[1].pattern)
         assertEquals(0, patterns[1].recursive)
+        assertEquals(PathType.WinAppDataLocalLow, patterns[1].uploadRoot)
     }
 
     /**
@@ -368,11 +375,13 @@ class KeyValueUtilsTest {
         assertEquals("Massive Monster/Cult Of The Lamb/saves", patterns[0].path)
         assertEquals("*.json", patterns[0].pattern)
         assertEquals(1, patterns[0].recursive)
+        assertEquals(PathType.GameInstall, patterns[0].uploadRoot)
 
         assertEquals(PathType.WinAppDataLocalLow, patterns[1].root)
         assertEquals("Massive Monster/Cult Of The Lamb/saves", patterns[1].path)
         assertEquals("*.mp", patterns[1].pattern)
         assertEquals(1, patterns[1].recursive)
+        assertEquals(PathType.GameInstall, patterns[1].uploadRoot)
     }
 
     /**
@@ -420,5 +429,6 @@ class KeyValueUtilsTest {
         assertEquals("Saved Games/Hades", patterns[0].path)
         assertEquals("Profile*.sav", patterns[0].pattern)
         assertEquals(0, patterns[0].recursive)
+        assertEquals(PathType.WinMyDocuments, patterns[0].uploadRoot)
     }
 }
