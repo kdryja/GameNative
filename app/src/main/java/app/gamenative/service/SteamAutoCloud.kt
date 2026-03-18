@@ -86,6 +86,13 @@ object SteamAutoCloud {
 
         Timber.i("Retrieving save files of ${appInfo.name}")
 
+        // When a rootoverride remaps a root (e.g. GameInstall → WinAppDataRoaming), the cloud
+        // still stores files under the original root placeholder (uploadRoot). Map those
+        // placeholders to the local root so downloads land in the right directory.
+        val uploadRootRemap: Map<String, String> = appInfo.ufs.saveFilePatterns
+            .filter { it.uploadRoot != it.root }
+            .associate { "%${it.uploadRoot.name}%" to it.root.name }
+
         val getPathTypePairs: (AppFileChangeList) -> List<Pair<String, String>> = { fileList ->
             fileList.pathPrefixes
                 .map {
@@ -102,7 +109,10 @@ object SteamAutoCloud {
                 }
                 .flatten()
                 .distinct()
-                .map { it to prefixToPath(it) }
+                .map { placeholder ->
+                    val localRootName = uploadRootRemap[placeholder] ?: placeholder
+                    placeholder to prefixToPath(localRootName)
+                }
         }
 
         val convertPrefixes: (AppFileChangeList) -> List<String> = { fileList ->
@@ -234,7 +244,7 @@ object SteamAutoCloud {
 
                         val relativePath = basePath.relativize(it).pathString
 
-                        UserFileInfo(userFile.root, userFile.substitutedPath, relativePath, Files.getLastModifiedTime(it).toMillis(), sha)
+                        UserFileInfo(userFile.root, userFile.substitutedPath, relativePath, Files.getLastModifiedTime(it).toMillis(), sha, cloudRoot = userFile.uploadRoot)
                     }.collect(Collectors.toList())
 
                     Timber.i("Found ${files.size} file(s) in $basePath for pattern ${userFile.pattern}")
