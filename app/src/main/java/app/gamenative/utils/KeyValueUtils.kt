@@ -189,7 +189,7 @@ fun KeyValue.generateSteamApp(): SteamApp {
                         root = rootRemap?.toRoot ?: originalRoot,
                         path = rootRemap?.let { rootOverride ->
                             var p = if (rootOverride.addPath.isNotEmpty()) {
-                                "${rootOverride.addPath.trimEnd('/')}/$originalPath"
+                                "${rootOverride.addPath.trimEnd('/')}/${originalPath.trimStart('/')}"
                             } else {
                                 originalPath
                             }
@@ -199,6 +199,7 @@ fun KeyValue.generateSteamApp(): SteamApp {
                         pattern = saveFile["pattern"].value.orEmpty(),
                         recursive = saveFile["recursive"].asInteger(0),
                         uploadRoot = originalRoot,
+                        uploadPath = originalPath,
                     )
                 },
             )

@@ -244,7 +244,7 @@ object SteamAutoCloud {
 
                         val relativePath = basePath.relativize(it).pathString
 
-                        UserFileInfo(userFile.root, userFile.substitutedPath, relativePath, Files.getLastModifiedTime(it).toMillis(), sha, cloudRoot = userFile.uploadRoot)
+                        UserFileInfo(userFile.root, userFile.substitutedPath, relativePath, Files.getLastModifiedTime(it).toMillis(), sha, cloudRoot = userFile.uploadRoot, cloudPath = userFile.uploadPath)
                     }.collect(Collectors.toList())
 
                     Timber.i("Found ${files.size} file(s) in $basePath for pattern ${userFile.pattern}")

@@ -195,6 +195,56 @@ class KeyValueUtilsTest {
     }
 
     /**
+     * When a Windows rootoverride prepends an addpath, uploadPath should preserve the original
+     * save path (without addpath) so cloud keys remain aligned with what other Steam clients use.
+     */
+    @Test
+    fun windowsRootOverrideWithAddPathPreservesUploadPath() {
+        val kvString = """
+            "appinfo"
+            {
+                "appid"     "123459"
+                "ufs"
+                {
+                    "quota"         "1000000000"
+                    "maxnumfiles"   "10"
+                    "savefiles"
+                    {
+                        "0"
+                        {
+                            "root"      "gameinstall"
+                            "path"      "saves"
+                            "pattern"   "*.sav"
+                        }
+                    }
+                    "rootoverrides"
+                    {
+                        "0"
+                        {
+                            "root"          "gameinstall"
+                            "os"            "Windows"
+                            "oscompare"     "="
+                            "useinstead"    "WinAppDataRoaming"
+                            "addpath"       "MyGame"
+                        }
+                    }
+                }
+            }
+        """.trimIndent()
+        val kv = KeyValue.loadFromString(kvString)!!
+        val steamApp = kv.generateSteamApp()
+
+        val patterns = steamApp.ufs.saveFilePatterns
+        assertEquals(1, patterns.size)
+        // Local resolution uses remapped root + addPath-prefixed path
+        assertEquals(PathType.WinAppDataRoaming, patterns[0].root)
+        assertEquals("MyGame/saves", patterns[0].path)
+        // Cloud key must use original root + original path (no addpath)
+        assertEquals(PathType.GameInstall, patterns[0].uploadRoot)
+        assertEquals("saves", patterns[0].uploadPath)
+    }
+
+    /**
      * A savefile restricted to Linux via a `platforms` block should be excluded on Windows.
      * A savefile with no `platforms` block should always be included.
      */
@@ -430,6 +480,55 @@ class KeyValueUtilsTest {
         assertEquals("Profile*.sav", patterns[0].pattern)
         assertEquals(0, patterns[0].recursive)
         assertEquals(PathType.WinMyDocuments, patterns[0].uploadRoot)
+    }
+
+    /**
+     * A Windows rootoverride whose original path starts with a slash should not produce a double
+     * separator (e.g. addpath="MyGame" + path="/saves" → "MyGame/saves", not "MyGame//saves").
+     */
+    @Test
+    fun windowsRootOverrideWithLeadingSlashPathDoesNotDuplicateSeparator() {
+        val kvString = """
+            "appinfo"
+            {
+                "appid"     "123458"
+                "ufs"
+                {
+                    "quota"         "1000000000"
+                    "maxnumfiles"   "10"
+                    "savefiles"
+                    {
+                        "0"
+                        {
+                            "root"      "gameinstall"
+                            "path"      "/saves"
+                            "pattern"   "*.sav"
+                        }
+                    }
+                    "rootoverrides"
+                    {
+                        "0"
+                        {
+                            "root"          "gameinstall"
+                            "os"            "Windows"
+                            "oscompare"     "="
+                            "useinstead"    "WinAppDataRoaming"
+                            "addpath"       "MyGame"
+                        }
+                    }
+                }
+            }
+        """.trimIndent()
+        val kv = KeyValue.loadFromString(kvString)!!
+        val steamApp = kv.generateSteamApp()
+
+        val patterns = steamApp.ufs.saveFilePatterns
+        assertEquals(1, patterns.size)
+        assertEquals(PathType.WinAppDataRoaming, patterns[0].root)
+        assertEquals("MyGame/saves", patterns[0].path)
+        assertEquals("*.sav", patterns[0].pattern)
+        assertEquals(0, patterns[0].recursive)
+        assertEquals(PathType.GameInstall, patterns[0].uploadRoot)
     }
 
     @Test
