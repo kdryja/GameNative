@@ -189,7 +189,16 @@ fun KeyValue.generateSteamApp(): SteamApp {
                         root = rootRemap?.toRoot ?: originalRoot,
                         path = rootRemap?.let { rootOverride ->
                             var p = if (rootOverride.addPath.isNotEmpty()) {
-                                "${rootOverride.addPath.trimEnd('/')}/${originalPath.trimStart('/')}"
+                                // Normalize backslashes: Steam's Windows addpath values use '\' as a
+                                // separator (e.g. "Godot\app_userdata\The Roottrees are Dead"), which
+                                // is valid on Windows but must be converted to '/' for Wine on Android.
+                                val normalizedAddPath = rootOverride.addPath.replace('\\', '/').trimEnd('/')
+                                // Only join with originalPath when it's non-empty; otherwise the plain
+                                // addpath is the full directory (e.g. The Roottrees are Dead has an
+                                // empty savefile path — appending "/" would produce a spurious trailing
+                                // slash that breaks file-system lookups).
+                                if (originalPath.isNotEmpty()) "$normalizedAddPath/${originalPath.trimStart('/')}"
+                                else normalizedAddPath
                             } else {
                                 originalPath
                             }

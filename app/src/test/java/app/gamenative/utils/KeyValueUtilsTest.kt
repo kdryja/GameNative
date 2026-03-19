@@ -531,6 +531,80 @@ class KeyValueUtilsTest {
         assertEquals(PathType.GameInstall, patterns[0].uploadRoot)
     }
 
+    /**
+     * The Roottrees are Dead (App ID 2754380) has a Windows rootoverride with an empty savefile
+     * path and a backslash-separated addpath ("Godot\app_userdata\The Roottrees are Dead").
+     * Two bugs this exercises:
+     *   1. Empty originalPath must not produce a trailing slash — the addpath alone is the full
+     *      directory, so joining "" would yield "Godot/.../The Roottrees are Dead/" which breaks
+     *      file-system lookups.
+     *   2. Backslashes in addpath must be normalized to '/' — Steam's Windows manifest uses '\',
+     *      which is valid on Windows but invalid as a path separator under Wine on Android.
+     * uploadPath must remain "" (the original manifest value) so cloud keys stay aligned with
+     * what other Steam clients expect.
+     */
+    @Test
+    fun roottreesAreDeadBackslashAddPathWithEmptyOriginalPathProducesCleanPath() {
+        val kvString = """
+            "appinfo"
+            {
+                "appid"     "2754380"
+                "ufs"
+                {
+                    "quota"         "5242880"
+                    "maxnumfiles"   "20"
+                    "savefiles"
+                    {
+                        "0"
+                        {
+                            "root"      "gameinstall"
+                            "path"      ""
+                            "pattern"   "*.save"
+                        }
+                    }
+                    "rootoverrides"
+                    {
+                        "0"
+                        {
+                            "root"          "gameinstall"
+                            "os"            "Windows"
+                            "oscompare"     "="
+                            "useinstead"    "WinAppDataRoaming"
+                            "addpath"       "Godot\\app_userdata\\The Roottrees are Dead"
+                        }
+                        "1"
+                        {
+                            "root"          "gameinstall"
+                            "os"            "MacOS"
+                            "oscompare"     "="
+                            "useinstead"    "MacAppSupport"
+                            "addpath"       "Godot/app_userdata/The Roottrees are Dead"
+                        }
+                        "2"
+                        {
+                            "root"          "gameinstall"
+                            "os"            "Linux"
+                            "oscompare"     "="
+                            "useinstead"    "LinuxHome"
+                            "addpath"       ".local/share/godot/app_userdata/The Roottrees are Dead"
+                        }
+                    }
+                }
+            }
+        """.trimIndent()
+        val kv = KeyValue.loadFromString(kvString)!!
+        val steamApp = kv.generateSteamApp()
+
+        val patterns = steamApp.ufs.saveFilePatterns
+        assertEquals(1, patterns.size)
+        assertEquals(PathType.WinAppDataRoaming, patterns[0].root)
+        assertEquals("Godot/app_userdata/The Roottrees are Dead", patterns[0].path)
+        assertEquals("*.save", patterns[0].pattern)
+        assertEquals(0, patterns[0].recursive)
+        assertEquals(PathType.GameInstall, patterns[0].uploadRoot)
+        assertEquals("", patterns[0].uploadPath)
+    }
+
     @Test
     fun generateSteamAppStampsCurrentUfsParseVersion() {
         val kvString = """
