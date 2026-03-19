@@ -93,6 +93,18 @@ object SteamAutoCloud {
             .filter { it.uploadRoot != it.root }
             .associate { "%${it.uploadRoot.name}%" to it.root.name }
 
+        // Full-prefix remap for patterns where addPath shifts the local subfolder relative to
+        // the cloud path. E.g. cloud "%GameInstall%saves" must land at "<WinAppDataRoaming>/MyGame/saves",
+        // not "<WinAppDataRoaming>/saves" — root-only replacement can't express this.
+        val cloudPrefixToLocalPath: Map<String, String> = appInfo.ufs.saveFilePatterns
+            .filter { it.uploadPath != it.path }
+            .associate { p ->
+                val cloudKey = "%${p.uploadRoot.name}%${p.uploadPath}"
+                    .replace("{64BitSteamID}", SteamUtils.getSteamId64().toString())
+                    .replace("{Steam3AccountID}", SteamUtils.getSteam3AccountId().toString())
+                cloudKey to Paths.get(prefixToPath(p.root.name), p.substitutedPath).pathString
+            }
+
         val getPathTypePairs: (AppFileChangeList) -> List<Pair<String, String>> = { fileList ->
             fileList.pathPrefixes
                 .map {
@@ -119,25 +131,30 @@ object SteamAutoCloud {
             val pathTypePairs = getPathTypePairs(fileList)
 
             fileList.pathPrefixes.map { prefix ->
-                var modified = prefix
+                // Full-prefix match first: handles addPath case where the cloud path omits a
+                // subfolder that the local path includes. Root-only replacement can't express this.
+                cloudPrefixToLocalPath[prefix]
+                    ?: run {
+                        var modified = prefix
 
-                val prefixContainsNoPlaceholder = findPlaceholderWithin(prefix).none()
+                        val prefixContainsNoPlaceholder = findPlaceholderWithin(prefix).none()
 
-                if (prefixContainsNoPlaceholder) {
-                    modified = Paths.get(PathType.DEFAULT.name, prefix).pathString
-                }
+                        if (prefixContainsNoPlaceholder) {
+                            modified = Paths.get(PathType.DEFAULT.name, prefix).pathString
+                        }
 
-                pathTypePairs.forEach {
-                    modified = modified.replace(it.first, it.second)
-                }
+                        pathTypePairs.forEach {
+                            modified = modified.replace(it.first, it.second)
+                        }
 
-                // if the prefix has not been modified then there were no placeholders in it
-                // so we need to set it to point to the default path
-                if (modified == prefix) {
-                    modified = Paths.get(prefixToPath(PathType.DEFAULT.name), modified).toString()
-                }
+                        // if the prefix has not been modified then there were no placeholders in it
+                        // so we need to set it to point to the default path
+                        if (modified == prefix) {
+                            modified = Paths.get(prefixToPath(PathType.DEFAULT.name), modified).toString()
+                        }
 
-                modified
+                        modified
+                    }
             }
         }
 
