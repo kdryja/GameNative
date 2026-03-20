@@ -133,7 +133,9 @@ object SteamAutoCloud {
             fileList.pathPrefixes.map { prefix ->
                 // Full-prefix match first: handles addPath case where the cloud path omits a
                 // subfolder that the local path includes. Root-only replacement can't express this.
-                cloudPrefixToLocalPath[prefix]
+                // Cloud prefixes sometimes include a trailing slash (e.g. "%WinAppDataLocalLow%76561198035529760/save1/")
+                // but the map keys are built without one — trim before lookup so they match.
+                cloudPrefixToLocalPath[prefix.trimEnd('/')]
                     ?: run {
                         var modified = prefix
 
