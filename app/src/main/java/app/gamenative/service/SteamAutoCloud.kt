@@ -705,8 +705,14 @@ object SteamAutoCloud {
                         Timber.i("  ISteamRemoteStorage file: ${file.filename} (size=${file.fileSize}, sha=${file.fileSha})")
                     }
 
-                    // Filter to files NOT already covered by UFS auto-cloud
-                    val isrsOnlyFiles = remoteStorageFiles.filter { it.filename !in ufsFileNames }
+                    // Filter to true ISteamRemoteStorage files only.
+                    // enumerateUserFiles returns ALL cloud files (UFS + ISteamRemoteStorage).
+                    // UFS files have %Placeholder% prefixed paths (e.g. %GameInstall%resources/...),
+                    // while true ISteamRemoteStorage files use bare filenames (e.g. "SaveData").
+                    // Note: bare-name files may also appear in the UFS getAppFileListChange list
+                    // (with a wrong pathPrefixIndex), but their UFS download will fail. We must
+                    // handle them here via ISteamRemoteStorage instead.
+                    val isrsOnlyFiles = remoteStorageFiles.filter { !it.filename.contains('%') }
 
                     if (isrsOnlyFiles.isNotEmpty()) {
                         Timber.i("Found ${isrsOnlyFiles.size} ISteamRemoteStorage-only file(s) to sync")
@@ -1013,11 +1019,13 @@ object SteamAutoCloud {
             // Upload modified ISteamRemoteStorage files (separate from UFS batch)
             // These files use bare filenames (e.g., "SaveData") not prefixed names
             try {
-                if (remoteStorageFiles.isNotEmpty()) {
+                // Filter to ISteamRemoteStorage-only files (bare names, no % prefixes)
+                val isrsUploadFiles = remoteStorageFiles.filter { !it.filename.contains('%') }
+                if (isrsUploadFiles.isNotEmpty()) {
                     val steamUserDataPath = Paths.get(prefixToPath(PathType.SteamUserData.toString()))
 
                     if (Files.exists(steamUserDataPath)) {
-                        remoteStorageFiles.forEach { cloudFile ->
+                        isrsUploadFiles.forEach { cloudFile ->
                             val localPath = steamUserDataPath.resolve(cloudFile.filename)
 
                             if (Files.exists(localPath)) {
