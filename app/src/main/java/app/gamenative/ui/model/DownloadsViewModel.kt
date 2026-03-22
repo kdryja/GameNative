@@ -24,6 +24,7 @@ import app.gamenative.ui.data.DownloadItemState
 import app.gamenative.ui.data.DownloadItemStatus
 import app.gamenative.ui.data.DownloadsState
 import app.gamenative.utils.ContainerUtils
+import app.gamenative.utils.CustomGameScanner
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.LinkedHashMap
@@ -151,6 +152,77 @@ class DownloadsViewModel @Inject constructor(
         val icon = cachedIcon ?: (game?.artUrl ?: "").also { gameIconCache[key] = it }
 
         return Pair(name, icon)
+    }
+
+    suspend fun resolveLibraryItem(gameSource: GameSource, appId: String): LibraryItem? {
+        val libraryAppId = "${gameSource.name}_$appId"
+
+        return when (gameSource) {
+            GameSource.STEAM -> {
+                val numericAppId = appId.toIntOrNull() ?: return null
+                val app = steamAppDao.findApp(numericAppId) ?: SteamService.getAppInfoOf(numericAppId)
+                app?.let {
+                    LibraryItem(
+                        appId = libraryAppId,
+                        name = it.name,
+                        iconHash = it.clientIconHash,
+                        capsuleImageUrl = it.getCapsuleUrl(),
+                        headerImageUrl = it.getHeaderImageUrl().orEmpty().ifEmpty { it.headerUrl },
+                        heroImageUrl = it.getHeroUrl().ifEmpty { it.headerUrl },
+                        gameSource = GameSource.STEAM,
+                    )
+                }
+            }
+
+            GameSource.GOG -> {
+                gogGameDao.getById(appId)?.let { game ->
+                    LibraryItem(
+                        appId = libraryAppId,
+                        name = game.title,
+                        iconHash = game.iconUrl.ifEmpty { game.imageUrl },
+                        capsuleImageUrl = game.iconUrl.ifEmpty { game.imageUrl },
+                        headerImageUrl = game.imageUrl.ifEmpty { game.iconUrl },
+                        heroImageUrl = game.imageUrl.ifEmpty { game.iconUrl },
+                        gameSource = GameSource.GOG,
+                    )
+                }
+            }
+
+            GameSource.EPIC -> {
+                val numericAppId = appId.toIntOrNull() ?: return null
+                epicGameDao.getById(numericAppId)?.let { game ->
+                    LibraryItem(
+                        appId = libraryAppId,
+                        name = game.title,
+                        iconHash = game.artSquare.ifEmpty { game.artCover },
+                        capsuleImageUrl = game.artCover.ifEmpty { game.artSquare },
+                        headerImageUrl = game.artPortrait.ifEmpty { game.artSquare.ifEmpty { game.artCover } },
+                        heroImageUrl = game.artPortrait.ifEmpty { game.artSquare.ifEmpty { game.artCover } },
+                        gameSource = GameSource.EPIC,
+                    )
+                }
+            }
+
+            GameSource.AMAZON -> {
+                val numericAppId = appId.toIntOrNull() ?: return null
+                amazonGameDao.getByAppId(numericAppId)?.let { game ->
+                    LibraryItem(
+                        appId = libraryAppId,
+                        name = game.title,
+                        iconHash = game.artUrl,
+                        capsuleImageUrl = game.artUrl,
+                        headerImageUrl = game.heroUrl.ifEmpty { game.artUrl },
+                        heroImageUrl = game.heroUrl.ifEmpty { game.artUrl },
+                        gameSource = GameSource.AMAZON,
+                    )
+                }
+            }
+
+            GameSource.CUSTOM_GAME -> {
+                CustomGameScanner.scanAsLibraryItems(query = "")
+                    .firstOrNull { it.appId == libraryAppId }
+            }
+        }
     }
 
     private fun buildActiveDownloadItem(

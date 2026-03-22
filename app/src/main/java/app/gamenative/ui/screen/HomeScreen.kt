@@ -51,6 +51,8 @@ fun HomeScreen(
         )
         HomeDestination.Downloads -> HomeDownloadsScreen(
             onBack = { viewModel.onDestination(HomeDestination.Library) },
+            onClickPlay = onClickPlay,
+            onTestGraphics = onTestGraphics,
         )
         HomeDestination.Friends -> {
             // TODO: Friends screen

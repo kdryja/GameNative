@@ -2,6 +2,7 @@ package app.gamenative.ui.screen.downloads
 
 import android.content.res.Configuration
 import android.text.format.Formatter
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -56,6 +57,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -79,11 +81,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.gamenative.R
 import app.gamenative.data.GameSource
+import app.gamenative.data.LibraryItem
 import app.gamenative.ui.component.dialog.MessageDialog
 import app.gamenative.ui.data.DownloadItemState
 import app.gamenative.ui.data.DownloadItemStatus
 import app.gamenative.ui.data.DownloadsState
 import app.gamenative.ui.model.DownloadsViewModel
+import app.gamenative.ui.screen.library.components.LibraryDetailPane
 import app.gamenative.ui.screen.settings.ContainerStorageManagerContent
 import app.gamenative.ui.screen.settings.ContainerStorageManagerTransientUi
 import app.gamenative.ui.screen.settings.rememberContainerStorageManagerUiState
@@ -91,6 +95,7 @@ import app.gamenative.ui.theme.PluviaTheme
 import com.skydoves.landscapist.ImageOptions
 import com.skydoves.landscapist.coil.CoilImage
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private enum class DownloadsSection(
     val titleResId: Int,
@@ -109,13 +114,40 @@ private enum class DownloadsSection(
 @Composable
 fun HomeDownloadsScreen(
     onBack: () -> Unit = {},
+    onClickPlay: (String, Boolean) -> Unit,
+    onTestGraphics: (String) -> Unit,
     viewModel: DownloadsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val storageManagerState = rememberContainerStorageManagerUiState()
+    val scope = rememberCoroutineScope()
     var selectedSectionIndex by rememberSaveable { mutableIntStateOf(DownloadsSection.Downloads.ordinal) }
     val sections = remember { DownloadsSection.values().toList() }
     val selectedSection = sections.getOrElse(selectedSectionIndex) { DownloadsSection.Downloads }
+    var selectedLibraryItem by remember { mutableStateOf<LibraryItem?>(null) }
+
+    fun fallbackLibraryItem(gameSource: GameSource, appId: String, name: String, iconUrl: String): LibraryItem {
+        return LibraryItem(
+            appId = "${gameSource.name}_$appId",
+            name = name,
+            iconHash = if (gameSource == GameSource.STEAM) "" else iconUrl,
+            capsuleImageUrl = iconUrl,
+            headerImageUrl = iconUrl,
+            heroImageUrl = iconUrl,
+            gameSource = gameSource,
+        )
+    }
+
+    fun openGame(gameSource: GameSource, appId: String, name: String, iconUrl: String) {
+        scope.launch {
+            selectedLibraryItem = viewModel.resolveLibraryItem(gameSource, appId)
+                ?: fallbackLibraryItem(gameSource, appId, name, iconUrl)
+        }
+    }
+
+    BackHandler(enabled = selectedLibraryItem != null) {
+        selectedLibraryItem = null
+    }
 
     Column(
         modifier = Modifier
@@ -125,7 +157,13 @@ fun HomeDownloadsScreen(
             .displayCutoutPadding(),
     ) {
         DownloadsHeader(
-            onBack = onBack,
+            onBack = {
+                if (selectedLibraryItem != null) {
+                    selectedLibraryItem = null
+                } else {
+                    onBack()
+                }
+            },
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
         )
 
@@ -135,14 +173,16 @@ fun HomeDownloadsScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            DownloadsSidebar(
-                sections = sections,
-                selectedSection = selectedSection,
-                onSectionSelected = { selectedSectionIndex = it.ordinal },
-                modifier = Modifier
-                    .width(96.dp)
-                    .fillMaxHeight(),
-            )
+            if (selectedLibraryItem == null) {
+                DownloadsSidebar(
+                    sections = sections,
+                    selectedSection = selectedSection,
+                    onSectionSelected = { selectedSectionIndex = it.ordinal },
+                    modifier = Modifier
+                        .width(96.dp)
+                        .fillMaxHeight(),
+                )
+            }
 
             Surface(
                 modifier = Modifier
@@ -153,27 +193,50 @@ fun HomeDownloadsScreen(
                 tonalElevation = 2.dp,
                 shadowElevation = 12.dp,
             ) {
-                when (selectedSection) {
-                    DownloadsSection.Downloads -> DownloadsContent(
-                        state = state,
-                        onResumeDownload = viewModel::onResumeDownload,
-                        onPauseDownload = viewModel::onPauseDownload,
-                        onCancelDownload = viewModel::onCancelDownload,
-                        onPauseAll = viewModel::onPauseAll,
-                        onResumeAll = viewModel::onResumeAll,
-                        onCancelAll = viewModel::onCancelAll,
-                        onClearFinished = viewModel::onClearFinished,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(20.dp),
+                if (selectedLibraryItem != null) {
+                    LibraryDetailPane(
+                        libraryItem = selectedLibraryItem,
+                        onBack = { selectedLibraryItem = null },
+                        onClickPlay = { useBoxArt ->
+                            selectedLibraryItem?.let { libraryItem ->
+                                onClickPlay(libraryItem.appId, useBoxArt)
+                            }
+                        },
+                        onTestGraphics = {
+                            selectedLibraryItem?.let { libraryItem ->
+                                onTestGraphics(libraryItem.appId)
+                            }
+                        },
                     )
+                } else {
+                    when (selectedSection) {
+                        DownloadsSection.Downloads -> DownloadsContent(
+                            state = state,
+                            onResumeDownload = viewModel::onResumeDownload,
+                            onPauseDownload = viewModel::onPauseDownload,
+                            onCancelDownload = viewModel::onCancelDownload,
+                            onPauseAll = viewModel::onPauseAll,
+                            onResumeAll = viewModel::onResumeAll,
+                            onCancelAll = viewModel::onCancelAll,
+                            onClearFinished = viewModel::onClearFinished,
+                            onOpenGame = { item ->
+                                openGame(item.gameSource, item.appId, item.gameName, item.iconUrl)
+                            },
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(20.dp),
+                        )
 
-                    DownloadsSection.Storage -> ContainerStorageManagerContent(
-                        state = storageManagerState,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(20.dp),
-                    )
+                        DownloadsSection.Storage -> ContainerStorageManagerContent(
+                            state = storageManagerState,
+                            onOpenGame = { gameSource, appId, name, iconUrl ->
+                                openGame(gameSource, appId.removePrefix("${gameSource.name}_"), name, iconUrl)
+                            },
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(20.dp),
+                        )
+                    }
                 }
             }
         }
@@ -360,6 +423,7 @@ private fun DownloadsContent(
     onResumeAll: () -> Unit,
     onCancelAll: () -> Unit,
     onClearFinished: () -> Unit,
+    onOpenGame: (DownloadItemState) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val items = remember(state.downloads) { state.downloads.values.toList() }
@@ -438,6 +502,7 @@ private fun DownloadsContent(
                 ) { item ->
                     DownloadItemCard(
                         item = item,
+                        onOpenGame = { onOpenGame(item) },
                         onResume = { onResumeDownload(item) },
                         onPause = { onPauseDownload(item) },
                         onCancel = { onCancelDownload(item) },
@@ -577,6 +642,7 @@ private fun EmptyDownloadsContent(
 @Composable
 private fun DownloadItemCard(
     item: DownloadItemState,
+    onOpenGame: () -> Unit,
     onResume: () -> Unit,
     onPause: () -> Unit,
     onCancel: () -> Unit,
@@ -753,15 +819,11 @@ private fun DownloadItemCard(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    CoilImage(
-                        imageModel = { item.iconUrl.ifEmpty { null } },
-                        imageOptions = ImageOptions(
-                            contentScale = ContentScale.Crop,
-                            contentDescription = item.gameName,
-                        ),
-                        modifier = Modifier
-                            .size(52.dp)
-                            .clip(RoundedCornerShape(10.dp)),
+                    GameArtworkButton(
+                        imageUrl = item.iconUrl,
+                        contentDescription = item.gameName,
+                        placeholderIcon = Icons.Default.Download,
+                        onClick = onOpenGame,
                     )
 
                     Spacer(modifier = Modifier.width(12.dp))
@@ -786,15 +848,11 @@ private fun DownloadItemCard(
                     .padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                CoilImage(
-                    imageModel = { item.iconUrl.ifEmpty { null } },
-                    imageOptions = ImageOptions(
-                        contentScale = ContentScale.Crop,
-                        contentDescription = item.gameName,
-                    ),
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(RoundedCornerShape(10.dp)),
+                GameArtworkButton(
+                    imageUrl = item.iconUrl,
+                    contentDescription = item.gameName,
+                    placeholderIcon = Icons.Default.Download,
+                    onClick = onOpenGame,
                 )
 
                 Spacer(modifier = Modifier.width(12.dp))
@@ -806,6 +864,68 @@ private fun DownloadItemCard(
                     actionButtons()
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun GameArtworkButton(
+    imageUrl: String,
+    contentDescription: String,
+    placeholderIcon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    val accentColor = PluviaTheme.colors.accentPurple
+
+    Box(
+        modifier = modifier
+            .size(52.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(
+                if (isFocused) {
+                    accentColor.copy(alpha = 0.18f)
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                }
+            )
+            .border(
+                width = if (isFocused) 2.dp else 1.dp,
+                color = if (isFocused) {
+                    accentColor.copy(alpha = 0.7f)
+                } else {
+                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
+                },
+                shape = RoundedCornerShape(10.dp),
+            )
+            .selectable(
+                selected = isFocused,
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (imageUrl.isNotBlank()) {
+            CoilImage(
+                imageModel = { imageUrl },
+                imageOptions = ImageOptions(
+                    contentScale = ContentScale.Crop,
+                    contentDescription = contentDescription,
+                ),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(10.dp)),
+            )
+        } else {
+            Icon(
+                imageVector = placeholderIcon,
+                contentDescription = contentDescription,
+                tint = if (isFocused) accentColor else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(22.dp),
+            )
         }
     }
 }

@@ -70,6 +70,8 @@ object ContainerStorageManager {
         val containerId: String,
         val displayName: String,
         val gameSource: GameSource? = null,
+        val appId: String? = null,
+        val iconUrl: String = "",
         val containerSizeBytes: Long,
         val gameInstallSizeBytes: Long? = null,
         val status: Status,
@@ -88,6 +90,7 @@ object ContainerStorageManager {
     private data class ResolvedGame(
         val name: String?,
         val installPath: String? = null,
+        val iconUrl: String = "",
         val known: Boolean,
     )
 
@@ -96,6 +99,7 @@ object ContainerStorageManager {
         val displayName: String,
         val gameSource: GameSource,
         val installPath: String,
+        val iconUrl: String = "",
     )
 
     suspend fun loadEntries(context: Context): List<Entry> = withContext(Dispatchers.IO) {
@@ -440,6 +444,7 @@ object ContainerStorageManager {
                         displayName = game.title.ifBlank { game.id },
                         gameSource = GameSource.GOG,
                         installPath = installDir.absolutePath,
+                        iconUrl = game.iconUrl.ifEmpty { game.imageUrl },
                     )
                 }
                 .toList()
@@ -461,6 +466,7 @@ object ContainerStorageManager {
                         displayName = game.title.ifBlank { game.appName.ifBlank { game.id.toString() } },
                         gameSource = GameSource.EPIC,
                         installPath = installDir.absolutePath,
+                        iconUrl = game.iconUrl,
                     )
                 }
                 .toList()
@@ -482,6 +488,7 @@ object ContainerStorageManager {
                         displayName = game.title.ifBlank { game.productId },
                         gameSource = GameSource.AMAZON,
                         installPath = installDir.absolutePath,
+                        iconUrl = game.artUrl,
                     )
                 }
                 .toList()
@@ -502,6 +509,7 @@ object ContainerStorageManager {
                         displayName = item.name.ifBlank { folder.name },
                         gameSource = GameSource.CUSTOM_GAME,
                         installPath = folder.absolutePath,
+                        iconUrl = item.clientIconUrl,
                     )
                 }
         }.onSuccess { games ->
@@ -522,6 +530,7 @@ object ContainerStorageManager {
                     displayName = app.name.ifBlank { app.id.toString() },
                     gameSource = GameSource.STEAM,
                     installPath = installPath,
+                    iconUrl = app.clientIconUrl.takeIf { app.clientIconHash.isNotEmpty() }.orEmpty(),
                 )
             }
     }
@@ -573,6 +582,8 @@ object ContainerStorageManager {
                 containerId = containerId,
                 displayName = installedGame?.displayName ?: containerId,
                 gameSource = gameSource,
+                appId = installedGame?.appId ?: normalizedContainerId.takeIf { gameSource != null },
+                iconUrl = installedGame?.iconUrl.orEmpty(),
                 containerSizeBytes = containerSizeBytes,
                 gameInstallSizeBytes = installedGame?.installPath?.let { getPathSize(it, pathSizeCache) },
                 status = Status.UNREADABLE,
@@ -613,6 +624,8 @@ object ContainerStorageManager {
             containerId = containerId,
             displayName = displayName,
             gameSource = gameSource,
+            appId = installedGame?.appId ?: normalizedContainerId.takeIf { gameSource != null },
+            iconUrl = installedGame?.iconUrl ?: resolved?.iconUrl.orEmpty(),
             containerSizeBytes = containerSizeBytes,
             gameInstallSizeBytes = gameInstallSizeBytes,
             status = status,
@@ -630,6 +643,8 @@ object ContainerStorageManager {
             containerId = installedGame.appId,
             displayName = installedGame.displayName,
             gameSource = installedGame.gameSource,
+            appId = installedGame.appId,
+            iconUrl = installedGame.iconUrl,
             containerSizeBytes = 0L,
             gameInstallSizeBytes = getPathSize(installedGame.installPath, pathSizeCache),
             status = Status.NO_CONTAINER,
@@ -731,6 +746,7 @@ object ContainerStorageManager {
     private fun InstalledGame.toResolvedGame(): ResolvedGame = ResolvedGame(
         name = displayName,
         installPath = installPath,
+        iconUrl = iconUrl,
         known = true,
     )
 
@@ -800,6 +816,7 @@ object ContainerStorageManager {
                 ResolvedGame(
                     name = app?.name,
                     installPath = SteamService.getAppDirPath(gameId),
+                    iconUrl = app?.clientIconUrl?.takeIf { app.clientIconHash.isNotEmpty() }.orEmpty(),
                     known = app != null,
                 )
             }
@@ -809,6 +826,11 @@ object ContainerStorageManager {
                 ResolvedGame(
                     name = folderPath?.let { File(it).name },
                     installPath = folderPath,
+                    iconUrl = if (folderPath != null) {
+                        LibraryItem(appId = normalizedContainerId, gameSource = GameSource.CUSTOM_GAME).clientIconUrl
+                    } else {
+                        ""
+                    },
                     known = folderPath != null,
                 )
             }
@@ -818,6 +840,7 @@ object ContainerStorageManager {
                 ResolvedGame(
                     name = game?.title,
                     installPath = game?.installPath,
+                    iconUrl = game?.iconUrl?.ifEmpty { game.imageUrl }.orEmpty(),
                     known = game != null,
                 )
             }
@@ -827,6 +850,7 @@ object ContainerStorageManager {
                 ResolvedGame(
                     name = game?.title,
                     installPath = game?.installPath,
+                    iconUrl = game?.iconUrl.orEmpty(),
                     known = game != null,
                 )
             }
@@ -837,6 +861,7 @@ object ContainerStorageManager {
                 ResolvedGame(
                     name = game?.title,
                     installPath = game?.installPath,
+                    iconUrl = game?.artUrl.orEmpty(),
                     known = game != null,
                 )
             }

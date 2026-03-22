@@ -3,8 +3,10 @@ package app.gamenative.ui.screen.settings
 import android.content.Context
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,10 +26,12 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Storage
@@ -56,6 +60,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -64,6 +69,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import app.gamenative.R
+import com.skydoves.landscapist.ImageOptions
+import com.skydoves.landscapist.coil.CoilImage
 import app.gamenative.data.GameSource
 import app.gamenative.ui.screen.library.GameMigrationDialog
 import app.gamenative.ui.theme.PluviaTheme
@@ -369,6 +376,7 @@ fun ContainerStorageManagerContent(
     state: ContainerStorageManagerUiState,
     modifier: Modifier = Modifier,
     onDismissRequest: (() -> Unit)? = null,
+    onOpenGame: ((GameSource, String, String, String) -> Unit)? = null,
 ) {
     LaunchedEffect(state) {
         state.ensureLoaded()
@@ -467,6 +475,7 @@ fun ContainerStorageManagerContent(
                         StorageEntryCard(
                             entry = entry,
                             actionsEnabled = !state.isMoving,
+                            onOpenGame = onOpenGame,
                             onMoveToExternal = {
                                 state.startMove(entry, ContainerStorageManager.MoveTarget.EXTERNAL)
                             },
@@ -535,6 +544,7 @@ fun ContainerStorageManagerDialog(
 private fun StorageEntryCard(
     entry: ContainerStorageManager.Entry,
     actionsEnabled: Boolean,
+    onOpenGame: ((GameSource, String, String, String) -> Unit)?,
     onMoveToExternal: () -> Unit,
     onMoveToInternal: () -> Unit,
     onRemove: () -> Unit,
@@ -547,6 +557,7 @@ private fun StorageEntryCard(
     val storageLocation = ContainerStorageManager.getStorageLocation(context, entry)
     val canMoveToExternal = ContainerStorageManager.canMoveToExternal(context, entry)
     val canMoveToInternal = ContainerStorageManager.canMoveToInternal(context, entry)
+    val canOpenGame = onOpenGame != null && entry.gameSource != null && !entry.appId.isNullOrBlank()
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -563,6 +574,19 @@ private fun StorageEntryCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                StorageArtworkButton(
+                    imageUrl = entry.iconUrl,
+                    contentDescription = displayName,
+                    enabled = canOpenGame,
+                    onClick = {
+                        val gameSource = entry.gameSource
+                        val appId = entry.appId
+                        if (gameSource != null && !appId.isNullOrBlank()) {
+                            onOpenGame?.invoke(gameSource, appId, displayName, entry.iconUrl)
+                        }
+                    },
+                )
+
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = displayName,
@@ -673,6 +697,68 @@ private fun StorageEntryCard(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun StorageArtworkButton(
+    imageUrl: String,
+    contentDescription: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    val accentColor = PluviaTheme.colors.accentPurple
+
+    Box(
+        modifier = Modifier
+            .size(52.dp)
+            .background(
+                color = if (isFocused) {
+                    accentColor.copy(alpha = 0.18f)
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                },
+                shape = RoundedCornerShape(10.dp),
+            )
+            .border(
+                width = if (isFocused) 2.dp else 1.dp,
+                color = if (isFocused) {
+                    accentColor.copy(alpha = 0.7f)
+                } else {
+                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
+                },
+                shape = RoundedCornerShape(10.dp),
+            )
+            .selectable(
+                selected = isFocused,
+                enabled = enabled,
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (imageUrl.isNotBlank()) {
+            CoilImage(
+                imageModel = { imageUrl },
+                imageOptions = ImageOptions(
+                    contentScale = ContentScale.Crop,
+                    contentDescription = contentDescription,
+                ),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(10.dp)),
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Default.Storage,
+                contentDescription = contentDescription,
+                tint = if (enabled && isFocused) accentColor else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(22.dp),
+            )
         }
     }
 }
