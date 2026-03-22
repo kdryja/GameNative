@@ -2709,6 +2709,38 @@ class SteamService : Service(), IChallengeUrlChanged {
             return dirs
         }
 
+        /**
+         * Scans GSE save directories for unlocked achievements and a stats directory.
+         * Shared by [syncAchievementsFromGoldberg] and [AchievementWatcher].
+         *
+         * @return pair of (unlocked achievement names, first stats directory found or null)
+         */
+        fun collectGseUnlocksAndStats(gseDirs: List<File>): Pair<Set<String>, File?> {
+            val unlocked = mutableSetOf<String>()
+            var statsDir: File? = null
+            for (dir in gseDirs) {
+                val achFile = File(dir, "achievements.json")
+                if (achFile.exists()) {
+                    try {
+                        val json = JSONObject(achFile.readText(Charsets.UTF_8))
+                        for (name in json.keys()) {
+                            val entry = json.optJSONObject(name) ?: continue
+                            if (entry.optBoolean("earned", false)) {
+                                unlocked.add(name)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Timber.e(e, "Failed to parse achievements.json in ${dir.absolutePath}")
+                    }
+                }
+                val sd = File(dir, "stats")
+                if (statsDir == null && sd.isDirectory && (sd.listFiles()?.isNotEmpty() == true)) {
+                    statsDir = sd
+                }
+            }
+            return unlocked to statsDir
+        }
+
         suspend fun syncAchievementsFromGoldberg(context: Context, appId: Int) {
             val gseSaveDirs = getGseSaveDirs(context, appId).filter { it.isDirectory }
             if (gseSaveDirs.isEmpty()) {
@@ -2716,34 +2748,9 @@ class SteamService : Service(), IChallengeUrlChanged {
                 return
             }
 
-            val unlockedNames = mutableSetOf<String>()
-            var gseStatsDir: File? = null
+            val (unlockedNames, gseStatsDir) = collectGseUnlocksAndStats(gseSaveDirs)
 
-            for (gseSaveDir in gseSaveDirs) {
-                val goldbergAchFile = File(gseSaveDir, "achievements.json")
-                if (goldbergAchFile.exists()) {
-                    try {
-                        val json = JSONObject(goldbergAchFile.readText(Charsets.UTF_8))
-                        for (name in json.keys()) {
-                            val entry = json.optJSONObject(name) ?: continue
-                            if (entry.optBoolean("earned", false)) {
-                                unlockedNames.add(name)
-                            }
-                        }
-                    } catch (e: Exception) {
-                        Timber.e(e, "Failed to parse Goldberg achievements.json in ${gseSaveDir.absolutePath} for appId=$appId")
-                    }
-                }
-
-                val statsDir = File(gseSaveDir, "stats")
-                if (gseStatsDir == null && statsDir.isDirectory && (statsDir.listFiles()?.isNotEmpty() == true)) {
-                    gseStatsDir = statsDir
-                }
-            }
-
-            val hasStats = gseStatsDir != null
-
-            if (unlockedNames.isEmpty() && !hasStats) {
+            if (unlockedNames.isEmpty() && gseStatsDir == null) {
                 Timber.d("No earned achievements or stats found in Goldberg output for appId=$appId")
                 return
             }
@@ -2754,6 +2761,7 @@ class SteamService : Service(), IChallengeUrlChanged {
                 return
             }
 
+            val hasStats = gseStatsDir != null
             Timber.i("Found ${unlockedNames.size} earned achievements and ${if (hasStats) "stats" else "no stats"} for appId=$appId, syncing to Steam")
             val result = storeAchievementUnlocks(appId, configDirectory, unlockedNames, gseStatsDir ?: gseSaveDirs.first().resolve("stats"))
             result.onSuccess {
@@ -2763,7 +2771,7 @@ class SteamService : Service(), IChallengeUrlChanged {
             }
         }
 
-        private fun findSteamSettingsDir(context: Context, appId: Int): String? {
+        fun findSteamSettingsDir(context: Context, appId: Int): String? {
             val appDirPath = getAppDirPath(appId)
             val appDirSettings = File(appDirPath, "steam_settings")
             if (File(appDirSettings, "achievement_name_to_block.json").exists()) {
