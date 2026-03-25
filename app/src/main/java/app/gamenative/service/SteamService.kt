@@ -1617,6 +1617,20 @@ class SteamService : Service(), IChallengeUrlChanged {
                             depotDownloader.add(dlcAppItem)
                         }
 
+                        // Signal that no more items will be added
+                        depotDownloader.finishAdding()
+
+                        // Start Download
+                        depotDownloader.startDownloading()
+
+                        Timber.i("Downloading game to " + defaultAppInstallPath)
+
+                        // Wait for completion
+                        depotDownloader.getCompletion().await()
+
+                        // Close the downloader
+                        depotDownloader.close()
+
                         val appConfig = getAppInfoOf(appId)?.config
                         if (appConfig?.steamControllerTemplateIndex == 1) {
                             val controllerConfig = appConfig.steamControllerConfigDetails
@@ -1748,20 +1762,6 @@ class SteamService : Service(), IChallengeUrlChanged {
                                 }
                             }
                         }
-
-                        // Signal that no more items will be added
-                        depotDownloader.finishAdding()
-
-                        // Start Download
-                        depotDownloader.startDownloading()
-
-                        Timber.i("Downloading game to " + defaultAppInstallPath)
-
-                        // Wait for completion
-                        depotDownloader.getCompletion().await()
-
-                        // Close the downloader
-                        depotDownloader.close()
 
                         // Complete app download
                         if (mainAppDepots.isNotEmpty()) {
