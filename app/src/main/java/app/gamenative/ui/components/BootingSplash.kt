@@ -33,7 +33,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.gamenative.ui.theme.PluviaTheme
-import app.gamenative.ui.theme.brandGradient
+import app.gamenative.ui.theme.BrandGradient
 import kotlin.math.sin
 import kotlin.random.Random
 import kotlinx.coroutines.delay
@@ -186,7 +186,7 @@ fun BootingSplash(
                                 blurRadius = 20f,
                             ),
                             brush = Brush.horizontalGradient(
-                                colors = PluviaTheme.colors.brandGradient,
+                                colors = BrandGradient,
                             ),
                         ),
                     )
@@ -271,7 +271,7 @@ private fun ProgressBar(
                 .clip(RoundedCornerShape(2.dp))
                 .background(
                     Brush.horizontalGradient(
-                        colors = PluviaTheme.colors.brandGradient,
+                        colors = BrandGradient,
                     ),
                 ),
         )

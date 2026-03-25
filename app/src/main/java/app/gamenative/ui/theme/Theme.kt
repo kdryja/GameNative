@@ -103,8 +103,7 @@ private val DarkPluviaColors = PluviaColors(
     compatibilityBadBackground = CompatibilityBadBg,
 )
 
-val PluviaColors.brandGradient: List<Color>
-    get() = listOf(accentCyan, accentPurple, accentPink)
+val BrandGradient = listOf(PluviaCyan, PluviaPurple, PluviaPink)
 
 // Light theme placeholder - customize when adding light theme support
 // private val LightPluviaColors = PluviaColors(...)

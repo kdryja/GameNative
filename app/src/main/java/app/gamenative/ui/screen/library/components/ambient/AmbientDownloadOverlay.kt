@@ -6,7 +6,12 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -18,8 +23,12 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.util.lerp
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import app.gamenative.PluviaApp
 import app.gamenative.events.AndroidEvent
 import app.gamenative.ui.screen.library.components.ambient.AmbientModeConstants.BAR_HEIGHT_DP
@@ -28,15 +37,13 @@ import app.gamenative.ui.screen.library.components.ambient.AmbientModeConstants.
 import app.gamenative.ui.screen.library.components.ambient.AmbientModeConstants.ENTER_DURATION_MS
 import app.gamenative.ui.screen.library.components.ambient.AmbientModeConstants.EXIT_DURATION_MS
 import app.gamenative.ui.screen.library.components.ambient.AmbientModeConstants.IDLE_TIMEOUT_MS
+import app.gamenative.ui.screen.library.components.ambient.AmbientModeConstants.BAR_BASE_ALPHA
+import app.gamenative.ui.screen.library.components.ambient.AmbientModeConstants.BAR_TRACK_ALPHA
 import app.gamenative.ui.screen.library.components.ambient.AmbientModeConstants.SHIMMER_PERIOD_MS
-import app.gamenative.ui.theme.PluviaTheme
-import app.gamenative.ui.theme.brandGradient
+import app.gamenative.ui.screen.library.components.ambient.AmbientModeConstants.SHIMMER_WIDTH_FRACTION
+import app.gamenative.ui.theme.BrandGradient
 import app.gamenative.utils.BrightnessManager
 import kotlinx.coroutines.delay
-
-private const val BAR_BASE_ALPHA = 0.25f
-private const val BAR_TRACK_ALPHA = 0.15f
-private const val SHIMMER_WIDTH_FRACTION = 0.15f
 
 /**
  * Only compose while a download is active. Brightness is restored on disposal.
@@ -48,7 +55,7 @@ internal fun AmbientDownloadOverlay(
 ) {
     val activity = LocalActivity.current as? ComponentActivity ?: return
     val brightnessManager = remember { BrightnessManager(activity, AmbientModeConstants.MIN_BRIGHTNESS) }
-    val brandGradient = PluviaTheme.colors.brandGradient
+    val brandGradient = BrandGradient
 
     var interactionCounter by remember { mutableIntStateOf(0) }
     var isIdle by remember { mutableStateOf(false) }
