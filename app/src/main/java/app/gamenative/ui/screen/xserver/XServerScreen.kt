@@ -3737,7 +3737,7 @@ private fun setupWineSystemFiles(
     }
 
     WineStartMenuCreator.create(context, container)
-    WineUtils.createDosdevicesSymlinks(container)
+    WineUtils.createDosdevicesSymlinks(context, container)
 
     val startupSelection = container.startupSelection.toString()
     if (startupSelection != container.getExtra("startupSelection")) {
