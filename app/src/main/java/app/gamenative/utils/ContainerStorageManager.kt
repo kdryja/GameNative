@@ -786,18 +786,11 @@ object ContainerStorageManager {
     }
 
     private fun estimateSteamInstallSize(app: SteamApp): Long? {
-        val preferredLanguage = PrefManager.containerLanguage
-        val has64Bit = app.depots.values.any { it.osArch == OSArch.Arch64 }
-        val downloadableDepots = app.depots.values.filter { depot ->
-            SteamService.filterForDownloadableDepots(
-                depot = depot,
-                has64Bit = has64Bit,
-                preferredLanguage = preferredLanguage,
-                ownedDlc = emptyMap(),
-            )
-        }
+        val installedDepotIds = SteamService.getInstalledDepotsOf(app.id).orEmpty().toSet()
+        if (installedDepotIds.isEmpty()) return null
 
-        return downloadableDepots
+        return app.depots.values
+            .filter { depot -> installedDepotIds.contains(depot.depotId) }
             .sumOf { depot -> depot.manifests["public"]?.size ?: depot.manifests.values.firstOrNull()?.size ?: 0L }
             .takeIf { it > 0L }
     }
