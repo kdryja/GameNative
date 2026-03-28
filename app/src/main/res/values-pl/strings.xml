@@ -81,6 +81,13 @@
     <string name="install_app">Zainstaluj</string>
     <string name="delete_app">Usuń</string>
     <string name="uninstall">Odinstaluj</string>
+    <string name="branch">Gałąź</string>
+    <string name="change_branch">Zmień gałąź</string>
+    <string name="change_branch_message">Pobieraj alternatywne wersje gry ze Steam, korzystając z gałęzi udostępnianych przez deweloperów. Wpisz kody dostępu, aby odblokować prywatne gałęzie.</string>
+    <string name="private_branch_password_hint">Wpisz kod dostępu</string>
+    <string name="private_branch_password_check">Sprawdź kod</string>
+    <string name="private_branch_password_success">Gałąź odblokowana!</string>
+    <string name="private_branch_password_invalid">Nieprawidłowy kod dostępu</string>
     <string name="run_app">Graj</string>
     <string name="download_prompt_title">Zainstaluj aplikację</string>
     <string name="calculating_space_requirements">Obliczanie wymaganego miejsca...</string>

@@ -72,6 +72,13 @@
     <string name="install_app">Installer</string>
     <string name="delete_app">Supprimer</string>
     <string name="uninstall">Désinstaller</string>
+    <string name="branch">Branche</string>
+    <string name="change_branch">Changer de branche</string>
+    <string name="change_branch_message">Téléchargez des versions alternatives du jeu depuis Steam via les branches fournies par les développeurs. Saisissez des codes d\'accès pour débloquer les branches privées.</string>
+    <string name="private_branch_password_hint">Saisir le code d\'accès</string>
+    <string name="private_branch_password_check">Vérifier le code</string>
+    <string name="private_branch_password_success">Branche débloquée !</string>
+    <string name="private_branch_password_invalid">Code d\'accès invalide</string>
     <string name="run_app">Jouer</string>
     <string name="download_prompt_title">Installer l\'application</string>
     <string name="calculating_space_requirements">Calcul des besoins en espace…</string>

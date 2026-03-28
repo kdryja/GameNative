@@ -16,6 +16,13 @@
     <string name="install_app">Instalar</string>
     <string name="delete_app">Deletar</string>
     <string name="uninstall">Desinstalar</string>
+    <string name="branch">Ramo</string>
+    <string name="change_branch">Alterar ramo</string>
+    <string name="change_branch_message">Baixe versões alternativas do jogo na Steam usando ramos fornecidos pelos desenvolvedores. Digite códigos de acesso para desbloquear ramos privados.</string>
+    <string name="private_branch_password_hint">Digite o código de acesso</string>
+    <string name="private_branch_password_check">Verificar código</string>
+    <string name="private_branch_password_success">Ramo desbloqueado!</string>
+    <string name="private_branch_password_invalid">Código de acesso inválido</string>
     <string name="run_app">Jogar</string>
     <string name="gog_uninstall_game_title">Desinstalar Jogo</string>
     <string name="gog_uninstall_confirmation_message">Tem certeza que deseja desinstalar %1$s? Esta ação não pode ser desfeita.</string>

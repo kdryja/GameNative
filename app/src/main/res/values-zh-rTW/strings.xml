@@ -71,6 +71,13 @@
     <string name="install_app">安裝</string>
     <string name="delete_app">刪除</string>
     <string name="uninstall">卸載</string>
+    <string name="branch">分支</string>
+    <string name="change_branch">變更分支</string>
+    <string name="change_branch_message">透過開發者提供的分支從 Steam 下載遊戲的替代版本。輸入存取代碼以解鎖私人分支。</string>
+    <string name="private_branch_password_hint">輸入存取代碼</string>
+    <string name="private_branch_password_check">驗證代碼</string>
+    <string name="private_branch_password_success">分支已解鎖！</string>
+    <string name="private_branch_password_invalid">存取代碼無效</string>
     <string name="run_app">開始遊戲</string>
     <string name="download_prompt_title">安裝應用</string>
     <string name="calculating_space_requirements">計算空間需求…</string>

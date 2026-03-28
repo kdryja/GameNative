@@ -1135,6 +1135,13 @@ https://gamenative.app
     <string name="two_factor_login">Вход</string>
     <string name="two_factor_verification_code">Код проверки</string>
     <string name="uninstall">Удалить</string>
+    <string name="branch">Ветка</string>
+    <string name="change_branch">Сменить ветку</string>
+    <string name="change_branch_message">Загружайте альтернативные версии игры через ветки, предоставляемые разработчиками. Введите коды доступа, чтобы разблокировать приватные ветки.</string>
+    <string name="private_branch_password_hint">Введите код доступа</string>
+    <string name="private_branch_password_check">Проверить код</string>
+    <string name="private_branch_password_success">Ветка разблокирована!</string>
+    <string name="private_branch_password_invalid">Неверный код доступа</string>
     <string name="unity">Unity</string>
     <string name="unity_mono_bleeding_edge">Unity Mono Bleeding Edge</string>
     <string name="unknown_app">Неизвестное приложение</string>

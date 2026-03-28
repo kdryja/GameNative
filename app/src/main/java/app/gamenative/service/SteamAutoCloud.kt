@@ -446,8 +446,7 @@ object SteamAutoCloud {
                     clientId = clientId,
                     filesToDelete = filesToDelete,
                     filesToUpload = filesToUpload.map { it.first },
-                    // TODO: have branch be user selected and use that selection here
-                    appBuildId = appInfo.branches["public"]?.buildId ?: 0,
+                    appBuildId = appInfo.branches[SteamService.getInstalledApp(appInfo.id)?.branch ?: "public"]?.buildId ?: 0,
                 ).await()
 
                 var uploadBatchSuccess = true

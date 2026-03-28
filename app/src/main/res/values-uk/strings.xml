@@ -60,6 +60,13 @@
     <string name="install_app">Інсталювати</string>
     <string name="delete_app">Видалити</string>
     <string name="uninstall">Деінсталювати</string>
+    <string name="branch">Гілка</string>
+    <string name="change_branch">Змінити гілку</string>
+    <string name="change_branch_message">Завантажуйте альтернативні версії гри зі Steam за допомогою гілок, наданих розробниками. Введіть коди доступу, щоб розблокувати приватні гілки.</string>
+    <string name="private_branch_password_hint">Введіть код доступу</string>
+    <string name="private_branch_password_check">Перевірити код</string>
+    <string name="private_branch_password_success">Гілку розблоковано!</string>
+    <string name="private_branch_password_invalid">Невірний код доступу</string>
     <string name="run_app">Грати</string>
     <string name="gog_uninstall_game_title">Деінсталювати гру</string>
     <string name="gog_uninstall_confirmation_message">Ви впевнені, що хочете деінсталювати %1$s? Цю дію не можна скасувати.</string>

@@ -81,6 +81,13 @@
     <string name="install_app">설치</string>
     <string name="delete_app">삭제</string>
     <string name="uninstall">제거</string>
+    <string name="branch">브랜치</string>
+    <string name="change_branch">브랜치 변경</string>
+    <string name="change_branch_message">개발자가 제공하는 브랜치를 통해 Steam에서 게임의 대체 버전을 다운로드하세요. 비공개 브랜치를 잠금 해제하려면 액세스 코드를 입력하세요.</string>
+    <string name="private_branch_password_hint">액세스 코드 입력</string>
+    <string name="private_branch_password_check">코드 확인</string>
+    <string name="private_branch_password_success">브랜치가 잠금 해제되었습니다!</string>
+    <string name="private_branch_password_invalid">잘못된 액세스 코드</string>
     <string name="run_app">플레이</string>
     <string name="download_prompt_title">앱 설치</string>
     <string name="calculating_space_requirements">공간 요구사항 계산 중...</string>

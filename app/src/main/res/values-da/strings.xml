@@ -16,6 +16,13 @@
     <string name="install_app">Installér</string>
     <string name="delete_app">Slet</string>
     <string name="uninstall">Afinstallér</string>
+    <string name="branch">Gren</string>
+    <string name="change_branch">Skift gren</string>
+    <string name="change_branch_message">Download alternative spilversioner fra Steam via udvikler-grene. Indtast adgangskoder for at låse private grene op.</string>
+    <string name="private_branch_password_hint">Indtast adgangskode</string>
+    <string name="private_branch_password_check">Tjek kode</string>
+    <string name="private_branch_password_success">Gren låst op!</string>
+    <string name="private_branch_password_invalid">Ugyldig adgangskode</string>
     <string name="run_app">Spil</string>
     <string name="gog_uninstall_game_title">Afinstallér spil</string>
     <string name="gog_uninstall_confirmation_message">Er du sikker på, at du vil afinstallere %1$s? Denne handling kan ikke fortrydes.</string>

@@ -3415,10 +3415,10 @@ private fun installRedistributables(
     try {
         val steamAppId = ContainerUtils.extractGameIdFromContainerId(appId)
 
-        // Get shared depots to determine if redistributables are needed
+        val installedBranch = SteamService.getInstalledApp(steamAppId)?.branch ?: "public"
         val downloadableDepots = SteamService.getDownloadableDepots(steamAppId)
         val sharedDepots = downloadableDepots.filter { (_, depotInfo) ->
-            val manifest = depotInfo.manifests["public"]
+            val manifest = depotInfo.manifests[installedBranch]
             manifest == null || manifest.gid == 0L
         }
 

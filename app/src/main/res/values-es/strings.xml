@@ -81,6 +81,13 @@
     <string name="install_app">Instalar</string>
     <string name="delete_app">Borrar</string>
     <string name="uninstall">Desinstalar</string>
+    <string name="branch">Rama</string>
+    <string name="change_branch">Cambiar de rama</string>
+    <string name="change_branch_message">Descarga versiones alternativas del juego desde Steam usando ramas proporcionadas por los desarrolladores. Introduce códigos de acceso para desbloquear ramas privadas.</string>
+    <string name="private_branch_password_hint">Introduce el código de acceso</string>
+    <string name="private_branch_password_check">Comprobar código</string>
+    <string name="private_branch_password_success">¡Rama desbloqueada!</string>
+    <string name="private_branch_password_invalid">Código de acceso no válido</string>
     <string name="run_app">Jugar</string>
     <string name="download_prompt_title">Instalar aplicación</string>
     <string name="calculating_space_requirements">Calculando requisitos de espacio…</string>

@@ -72,6 +72,13 @@
     <string name="install_app">Installa</string>
     <string name="delete_app">Elimina</string>
     <string name="uninstall">Disinstalla</string>
+    <string name="branch">Ramo</string>
+    <string name="change_branch">Cambia ramo</string>
+    <string name="change_branch_message">Scarica versioni alternative del gioco da Steam usando i rami forniti dagli sviluppatori. Inserisci i codici di accesso per sbloccare i rami privati.</string>
+    <string name="private_branch_password_hint">Inserisci il codice di accesso</string>
+    <string name="private_branch_password_check">Verifica codice</string>
+    <string name="private_branch_password_success">Ramo sbloccato!</string>
+    <string name="private_branch_password_invalid">Codice di accesso non valido</string>
     <string name="run_app">Gioca</string>
     <string name="download_prompt_title">Installa App</string>
     <string name="calculating_space_requirements">Calcolo requisiti di spazio...</string>

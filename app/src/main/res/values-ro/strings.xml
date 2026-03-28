@@ -72,6 +72,13 @@
     <string name="install_app">Instalează</string>
     <string name="delete_app">Șterge</string>
     <string name="uninstall">Dezinstalează</string>
+    <string name="branch">Ramură</string>
+    <string name="change_branch">Schimbă ramura</string>
+    <string name="change_branch_message">Descarcă versiuni alternative ale jocului de pe Steam folosind ramuri oferite de dezvoltatori. Introdu coduri de acces pentru a debloca ramuri private.</string>
+    <string name="private_branch_password_hint">Introdu codul de acces</string>
+    <string name="private_branch_password_check">Verifică codul</string>
+    <string name="private_branch_password_success">Ramură deblocată!</string>
+    <string name="private_branch_password_invalid">Cod de acces invalid</string>
     <string name="run_app">Pornește</string>
     <string name="download_prompt_title">Instalare aplicație</string>
     <string name="calculating_space_requirements">Se calculează cerințele de spațiu...</string>
