@@ -47,7 +47,9 @@ import app.gamenative.enums.SaveLocation
 import app.gamenative.enums.SyncResult
 import app.gamenative.events.AndroidEvent
 import app.gamenative.events.SteamEvent
+import app.gamenative.utils.CaseInsensitiveFileSystem
 import app.gamenative.utils.ContainerUtils
+import app.gamenative.utils.FileUtils
 import app.gamenative.utils.LicenseSerializer
 import app.gamenative.utils.MarkerUtils
 import app.gamenative.utils.Net
@@ -1387,7 +1389,7 @@ class SteamService : Service(), IChallengeUrlChanged {
                 .orEmpty()
             if (manifestPath.isEmpty()) return null
 
-            return resolvePathCaseInsensitive(appDirPath, manifestPath)
+            return FileUtils.findFileCaseInsensitive(File(appDirPath), manifestPath)
         }
 
         private fun loadConfigFromManifest(
@@ -1440,7 +1442,7 @@ class SteamService : Service(), IChallengeUrlChanged {
                         val configPath = pathNode.asString().orEmpty()
                         if (pathNode === KeyValue.INVALID || configPath.isEmpty()) continue
 
-                        val configFile = resolvePathCaseInsensitive(manifestDirPath, configPath)
+                        val configFile = FileUtils.findFileCaseInsensitive(File(manifestDirPath), configPath)
                             ?: continue
                         return configFile.readText(Charsets.UTF_8)
                     }
@@ -1451,34 +1453,6 @@ class SteamService : Service(), IChallengeUrlChanged {
                 Timber.e(e, "Failed to parse Steam Input manifest config")
                 null
             }
-        }
-
-        private fun resolvePathCaseInsensitive(
-            baseDirPath: String,
-            relativePath: String,
-        ): File? {
-            val directFile = File(baseDirPath, relativePath)
-            if (directFile.exists()) return directFile
-
-            var currentDir = File(baseDirPath)
-            if (!currentDir.exists() || !currentDir.isDirectory) return null
-
-            val segments = relativePath.split('/', '\\').filter { it.isNotEmpty() }
-            for ((index, segment) in segments.withIndex()) {
-                val entries = currentDir.listFiles() ?: return null
-                val matched = entries.firstOrNull {
-                    it.name.equals(segment, ignoreCase = true)
-                } ?: return null
-
-                if (index == segments.lastIndex) {
-                    return matched
-                }
-
-                if (!matched.isDirectory) return null
-                currentDir = matched
-            }
-
-            return null
         }
 
         private fun readBuiltInSteamInputTemplate(fileName: String): String? {
@@ -1679,6 +1653,7 @@ class SteamService : Service(), IChallengeUrlChanged {
                             maxDecompress = maxDecompress,
                             parentJob = coroutineContext[Job],
                             autoStartDownload = false,
+                            filesystem = CaseInsensitiveFileSystem(),
                         )
 
                         // Create listeners for DLC apps
